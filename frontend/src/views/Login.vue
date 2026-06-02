@@ -48,9 +48,10 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
-// 引入路由实例用于跳转
 const router = useRouter()
+const userStore = useUserStore()
 
 // 响应式状态管理
 const loginForm = reactive({
@@ -77,11 +78,15 @@ const handleLogin = async () => {
   setTimeout(() => {
     // 模拟账号密码校验
     if (loginForm.username === 'admin' && loginForm.password === '123456') {
-      // 登录成功！
-      // 1. 真实项目中通常会在这里把后端返回的 Token 存入 localStorage 或 Pinia
-      // localStorage.setItem('token', 'your_mock_token_here')
-      
-      // 2. 跳转到受 Layout 保护的后台首页
+      // 登录成功 —— 写入用户信息到 Pinia（持久化到 localStorage）
+      userStore.setUserInfo({
+        name: '小林',
+        target: '两周内掌握 A* 搜索算法',
+        imgSrc: 'https://api.dicebear.com/7.x/notionists/svg?seed=Felix',
+        studentId: 1,
+        courseId: 1,
+        token: 'mock_token_' + Date.now()
+      })
       router.push('/dashboard')
     } else {
       // 登录失败
