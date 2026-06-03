@@ -131,8 +131,7 @@ function formatTime(time) {
   flex-direction: column;
   gap: 20px;
 }
-.page-header h2 { margin: 0 0 4px; font-size: 20px; color: #1a202c; }
-.page-header p { margin: 0; font-size: 14px; color: #718096; }
+/* .page-header 样式已移至 style.css 全局定义 */
 .search-card { border-radius: 12px; }
 .search-form {
   display: flex;
@@ -172,18 +171,18 @@ function formatTime(time) {
   flex-shrink: 0;
 }
 .agent-item.success .indicator-dot {
-  background: #67c23a;
+  background: var(--color-success);
   color: white;
 }
 .agent-item.failed .indicator-dot {
-  background: #f56c6c;
+  background: var(--color-danger);
   color: white;
 }
 .indicator-line {
   width: 2px;
   flex: 1;
   min-height: 16px;
-  background: #e2e8f0;
+  background: var(--border-default);
   margin: 4px 0;
 }
 .agent-content {
@@ -200,15 +199,15 @@ function formatTime(time) {
 }
 .agent-time {
   font-size: 12px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
 }
 .agent-latency {
   font-size: 12px;
-  color: #718096;
+  color: var(--text-subtle);
 }
 .agent-body {
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 8px;
@@ -219,16 +218,16 @@ function formatTime(time) {
   line-height: 1.6;
 }
 .agent-section:last-child { margin-bottom: 0; }
-.agent-section.error { color: #e53e3e; }
+.agent-section.error { color: var(--color-error); }
 .section-label {
   font-weight: 600;
-  color: #4a5568;
+  color: var(--text-muted);
 }
 .agent-section.error .section-label {
-  color: #e53e3e;
+  color: var(--color-error);
 }
 .section-text {
-  color: #2d3748;
+  color: var(--text-body);
 }
 .agent-footer {
   display: flex;

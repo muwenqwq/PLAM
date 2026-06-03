@@ -104,7 +104,7 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f8f9fc; /* 配合你原型的底色 */
+  background-color: var(--bg-page);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -112,7 +112,7 @@ const handleLogin = async () => {
 .login-card {
   width: 100%;
   max-width: 400px;
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 16px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
   padding: 40px;
@@ -131,12 +131,12 @@ const handleLogin = async () => {
 .title {
   margin: 0 0 8px 0;
   font-size: 24px;
-  color: #1a202c;
+  color: var(--text-heading);
 }
 .subtitle {
   margin: 0;
   font-size: 14px;
-  color: #718096;
+  color: var(--text-subtle);
 }
 
 /* 表单组样式 */
@@ -148,39 +148,39 @@ const handleLogin = async () => {
 .form-group label {
   font-size: 14px;
   font-weight: 500;
-  color: #4a5568;
+  color: var(--text-muted);
   margin-bottom: 8px;
 }
 .form-group input {
   padding: 12px 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   font-size: 15px;
-  color: #2d3748;
+  color: var(--text-body);
   transition: all 0.2s;
   outline: none;
 }
 .form-group input:focus {
-  border-color: #3182ce;
-  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-focus);
 }
 
 /* 错误提示 */
 .error-message {
-  background-color: #fff5f5;
-  color: #e53e3e;
+  background-color: var(--color-error-bg);
+  color: var(--color-error);
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 13px;
   margin-bottom: 20px;
-  border: 1px solid #fed7d7;
+  border: 1px solid var(--color-error-border);
 }
 
 /* 提交按钮 */
 .submit-btn {
   width: 100%;
   padding: 12px;
-  background-color: #1668e2; /* 原型中按钮的蓝色 */
+  background-color: var(--color-primary);
   color: white;
   border: none;
   border-radius: 8px;
@@ -193,10 +193,10 @@ const handleLogin = async () => {
   transition: background-color 0.2s;
 }
 .submit-btn:hover:not(:disabled) {
-  background-color: #1052b5;
+  background-color: var(--color-primary-dark);
 }
 .submit-btn:disabled {
-  background-color: #a0aec0;
+  background-color: var(--text-placeholder);
   cursor: not-allowed;
 }
 

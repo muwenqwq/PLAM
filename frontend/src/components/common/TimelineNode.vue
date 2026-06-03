@@ -56,33 +56,33 @@ const statusType = computed(() => statusMap[props.node.status]?.type || 'info')
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #e2e8f0;
+  background: var(--border-default);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
   font-weight: 600;
-  color: #718096;
+  color: var(--text-subtle);
   flex-shrink: 0;
   transition: all 0.3s;
 }
 .timeline-node.completed .indicator-dot {
-  background: #67c23a;
+  background: var(--color-success);
   color: white;
 }
 .timeline-node.in_progress .indicator-dot {
-  background: #e6a23c;
+  background: var(--color-warning);
   color: white;
 }
 .indicator-line {
   width: 2px;
   flex: 1;
   min-height: 24px;
-  background: #e2e8f0;
+  background: var(--border-default);
   margin: 4px 0;
 }
 .timeline-node.completed .indicator-line {
-  background: #67c23a;
+  background: var(--color-success);
 }
 .node-content {
   flex: 1;
@@ -100,12 +100,12 @@ const statusType = computed(() => statusMap[props.node.status]?.type || 'info')
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #1a202c;
+  color: var(--text-heading);
 }
 .node-reason {
   margin: 0 0 8px;
   font-size: 13px;
-  color: #718096;
+  color: var(--text-subtle);
   line-height: 1.5;
 }
 .node-meta {
@@ -115,6 +115,6 @@ const statusType = computed(() => statusMap[props.node.status]?.type || 'info')
 }
 .meta-item {
   font-size: 12px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
 }
 </style>

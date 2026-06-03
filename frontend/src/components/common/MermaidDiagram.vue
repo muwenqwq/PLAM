@@ -60,12 +60,12 @@ watch(() => props.code, () => { nextTick(render) })
 .mermaid-error {
   padding: 24px;
   text-align: center;
-  color: #718096;
+  color: var(--text-subtle);
   font-size: 14px;
 }
 .mermaid-error {
-  color: #e53e3e;
-  background: #fff5f5;
+  color: var(--color-error);
+  background: var(--color-error-bg);
   border-radius: 8px;
 }
 </style>

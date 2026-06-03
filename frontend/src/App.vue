@@ -11,7 +11,7 @@ html, body, #app {
   padding: 0;
   height: 100%;
   width: 100%;
-  background-color: #f5f7f9;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-page);
+  font-family: var(--font-sans);
 }
 </style>

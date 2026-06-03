@@ -64,13 +64,13 @@ function formatTime(time) {
 }
 .score {
   font-size: 13px;
-  color: #e6a23c;
+  color: var(--color-warning);
 }
 .card-title {
   margin: 0 0 12px;
   font-size: 15px;
   font-weight: 600;
-  color: #1a202c;
+  color: var(--text-heading);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -83,6 +83,6 @@ function formatTime(time) {
 }
 .time {
   font-size: 12px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
 }
 </style>

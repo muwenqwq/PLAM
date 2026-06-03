@@ -45,12 +45,12 @@ const userStore = useUserStore()
   margin: 0;
   font-size: 20px;
   font-weight: 600;
-  color: #1a202c;
+  color: var(--text-heading);
 }
 
 .subtitle {
   font-size: 13px;
-  color: #718096;
+  color: var(--text-subtle);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -67,7 +67,7 @@ const userStore = useUserStore()
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: #4a5568;
+  color: var(--text-muted);
 }
 
 .avatar {
@@ -75,7 +75,7 @@ const userStore = useUserStore()
   height: 36px;
   border-radius: 50%;
   overflow: hidden;
-  background-color: #e2e8f0;
+  background-color: var(--bg-muted);
   cursor: pointer;
 }
 

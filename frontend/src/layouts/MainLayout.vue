@@ -24,7 +24,7 @@ import Navbar from '@/components/navigation/Navbar.vue';
   display: flex;
   height: 100vh;
   width: 100vw;
-  background-color: #f8f9fc; /* 原型主体的浅灰背景色 */
+  background-color: var(--bg-page);
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }

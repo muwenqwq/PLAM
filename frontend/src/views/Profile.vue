@@ -163,16 +163,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 24px;
 }
-.page-header h2 {
-  margin: 0 0 4px;
-  font-size: 20px;
-  color: #1a202c;
-}
-.page-header p {
-  margin: 0;
-  font-size: 14px;
-  color: #718096;
-}
+/* .page-header 样式已移至 style.css 全局定义 */
 .input-card {
   border-radius: 12px;
 }
@@ -184,7 +175,7 @@ onMounted(() => {
 }
 .input-hint {
   font-size: 12px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
 }
 .result-card,
 .history-card {
@@ -207,6 +198,6 @@ onMounted(() => {
 .history-summary {
   margin: 0;
   font-size: 13px;
-  color: #718096;
+  color: var(--text-subtle);
 }
 </style>

@@ -106,25 +106,25 @@ function getProgressColor(val) {
 }
 .item-label {
   font-size: 12px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
   margin-bottom: 2px;
 }
 .item-value {
   font-size: 14px;
-  color: #2d3748;
+  color: var(--text-body);
   font-weight: 500;
   word-break: break-all;
 }
 .section {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-divider);
 }
 .section-title {
   margin: 0 0 10px;
   font-size: 14px;
   font-weight: 600;
-  color: #4a5568;
+  color: var(--text-muted);
 }
 .tag-list {
   display: flex;
@@ -145,7 +145,7 @@ function getProgressColor(val) {
   width: 120px;
   flex-shrink: 0;
   font-size: 14px;
-  color: #4a5568;
+  color: var(--text-muted);
 }
 .mastery-item :deep(.el-progress) {
   flex: 1;

@@ -173,8 +173,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
 }
-.page-header h2 { margin: 0 0 4px; font-size: 20px; color: #1a202c; }
-.page-header p { margin: 0; font-size: 14px; color: #718096; }
+/* .page-header 样式已移至 style.css 全局定义 */
 .generate-card { border-radius: 12px; }
 .generate-form {
   display: flex;
@@ -197,8 +196,8 @@ onMounted(() => {
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-divider);
 }
-.meta-score { font-size: 13px; color: #e6a23c; }
-.meta-time { font-size: 12px; color: #a0aec0; }
+.meta-score { font-size: 13px; color: var(--color-warning); }
+.meta-time { font-size: 12px; color: var(--text-placeholder); }
 </style>

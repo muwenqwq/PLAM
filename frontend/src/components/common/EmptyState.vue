@@ -31,12 +31,12 @@ defineProps({
 .empty-title {
   font-size: 16px;
   font-weight: 500;
-  color: #4a5568;
+  color: var(--text-muted);
   margin: 0 0 8px;
 }
 .empty-desc {
   font-size: 14px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
   margin: 0;
 }
 </style>

@@ -92,8 +92,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: flex-start;
 }
-.page-header h2 { margin: 0 0 4px; font-size: 20px; color: #1a202c; }
-.page-header p { margin: 0; font-size: 14px; color: #718096; }
+/* .page-header 样式已移至 style.css 全局定义 */
 .stats-bar {
   display: flex;
   gap: 8px;

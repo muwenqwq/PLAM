@@ -45,7 +45,7 @@ defineProps({
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #f0f2f5;
+  background: var(--bg-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -64,20 +64,20 @@ defineProps({
   line-height: 1.7;
 }
 .chat-msg.user .msg-content {
-  background: #3182ce;
+  background: var(--color-primary);
   color: white;
   border-bottom-right-radius: 4px;
 }
 .chat-msg.assistant .msg-content {
-  background: #f7fafc;
-  color: #2d3748;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-hover);
+  color: var(--text-body);
+  border: 1px solid var(--border-default);
   border-bottom-left-radius: 4px;
 }
 .chat-msg.error .msg-content {
-  background: #fff5f5;
-  border-color: #fed7d7;
-  color: #e53e3e;
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
+  color: var(--color-error);
 }
 .msg-sources {
   display: flex;
@@ -88,6 +88,6 @@ defineProps({
 }
 .sources-label {
   font-size: 12px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
 }
 </style>

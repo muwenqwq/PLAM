@@ -23,10 +23,10 @@ defineProps({
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  color: #718096;
+  color: var(--text-subtle);
 }
 .loading-spinner {
-  color: #3182ce;
+  color: var(--color-primary);
 }
 .loading-text {
   margin-top: 12px;

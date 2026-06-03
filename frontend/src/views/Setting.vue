@@ -36,6 +36,19 @@
       </el-form>
     </el-card>
 
+    <!-- 外观设置 -->
+    <el-card shadow="never" class="setting-card">
+      <template #header><span>🎨 外观设置</span></template>
+      <el-form label-width="80px" class="setting-form">
+        <el-form-item label="主题模式">
+          <el-radio-group v-model="currentTheme" @change="handleThemeChange">
+            <el-radio-button value="light">☀️ 浅色</el-radio-button>
+            <el-radio-button value="dark">🌙 深色</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
     <!-- 系统信息 -->
     <el-card shadow="never" class="setting-card">
       <template #header><span>ℹ️ 系统信息</span></template>
@@ -65,11 +78,17 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
+
+// 主题切换
+const currentTheme = ref(userStore.theme || 'light')
+function handleThemeChange(val) {
+  userStore.setTheme(val)
+}
 
 // 表单数据（从 store 初始化）
 const form = reactive({
@@ -137,8 +156,7 @@ async function handleClearData() {
   flex-direction: column;
   gap: 20px;
 }
-.page-header h2 { margin: 0 0 4px; font-size: 20px; color: #1a202c; }
-.page-header p { margin: 0; font-size: 14px; color: #718096; }
+/* .page-header 样式已移至 style.css 全局定义 */
 .setting-card { border-radius: 12px; }
 .setting-form {
   max-width: 480px;
@@ -149,7 +167,7 @@ async function handleClearData() {
   gap: 16px;
 }
 .danger-card :deep(.el-card__header) {
-  background: #fff5f5;
+  background: var(--color-error-bg);
 }
 .danger-actions {
   display: flex;
@@ -165,11 +183,11 @@ async function handleClearData() {
 .danger-item h4 {
   margin: 0 0 4px;
   font-size: 14px;
-  color: #2d3748;
+  color: var(--text-body);
 }
 .danger-item p {
   margin: 0;
   font-size: 12px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
 }
 </style>

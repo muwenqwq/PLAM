@@ -134,6 +134,11 @@ function formatTime(time) {
   return new Date(time).toLocaleString('zh-CN')
 }
 
+// 从 CSS 变量读取颜色（支持主题切换）
+function getCSSVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 // 渲染雷达图
 function renderChart() {
   const map = analyticsStore.analytics?.masteryMap
@@ -145,21 +150,22 @@ function renderChart() {
 
   const keys = Object.keys(map)
   const values = Object.values(map).map(v => Math.round(v * 100))
+  const primary = getCSSVar('--color-primary') || '#3182ce'
 
   chartInstance.setOption({
     radar: {
       indicator: keys.map(k => ({ name: k, max: 100 })),
       shape: 'polygon',
-      splitArea: { areaStyle: { color: ['#f7fafc', '#edf2f7', '#e2e8f0'] } }
+      splitArea: { areaStyle: { color: [getCSSVar('--bg-hover'), getCSSVar('--border-light'), getCSSVar('--border-default')] } }
     },
     series: [{
       type: 'radar',
       data: [{
         value: values,
         name: '掌握度',
-        areaStyle: { color: 'rgba(49,130,206,0.2)' },
-        lineStyle: { color: '#3182ce', width: 2 },
-        itemStyle: { color: '#3182ce' }
+        areaStyle: { color: primary + '33' },
+        lineStyle: { color: primary, width: 2 },
+        itemStyle: { color: primary }
       }]
     }]
   })
@@ -188,8 +194,7 @@ watch(() => analyticsStore.analytics, () => { nextTick(renderChart) }, { deep: t
   flex-direction: column;
   gap: 20px;
 }
-.page-header h2 { margin: 0 0 4px; font-size: 20px; color: #1a202c; }
-.page-header p { margin: 0; font-size: 14px; color: #718096; }
+/* .page-header 样式已移至 style.css 全局定义 */
 
 /* 概览卡片 */
 .overview-cards {
@@ -205,14 +210,14 @@ watch(() => analyticsStore.analytics, () => { nextTick(renderChart) }, { deep: t
 .stat-value {
   font-size: 32px;
   font-weight: 700;
-  color: #3182ce;
+  color: var(--color-primary);
 }
-.stat-value.score { color: #e6a23c; }
-.stat-value.weak { color: #f56c6c; }
+.stat-value.score { color: var(--color-warning); }
+.stat-value.weak { color: var(--color-danger); }
 .stat-label {
   margin-top: 8px;
   font-size: 13px;
-  color: #718096;
+  color: var(--text-subtle);
 }
 
 /* 详情行 */
@@ -240,14 +245,14 @@ watch(() => analyticsStore.analytics, () => { nextTick(renderChart) }, { deep: t
   width: 100px;
   flex-shrink: 0;
   font-size: 14px;
-  color: #4a5568;
+  color: var(--text-muted);
 }
 .weak-item :deep(.el-progress) { flex: 1; }
 
 /* 测验表格 */
 .recent-card { border-radius: 12px; }
-.score-pass { color: #67c23a; font-weight: 600; }
-.score-fail { color: #f56c6c; font-weight: 600; }
+.score-pass { color: var(--color-success); font-weight: 600; }
+.score-fail { color: var(--color-danger); font-weight: 600; }
 
 @media (max-width: 900px) {
   .overview-cards { grid-template-columns: 1fr; }

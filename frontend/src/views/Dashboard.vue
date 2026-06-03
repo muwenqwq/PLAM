@@ -128,7 +128,7 @@ onMounted(() => {
 
 /* 欢迎卡片 */
 .welcome-card {
-  background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   border: none;
   border-radius: 12px;
 }
@@ -144,7 +144,7 @@ onMounted(() => {
 .welcome-text h2 {
   margin: 0 0 8px;
   font-size: 22px;
-  color: #ffffff;
+  color: var(--color-white);
 }
 .welcome-text .goal {
   margin: 0 0 4px;
@@ -191,12 +191,12 @@ onMounted(() => {
   margin: 0 0 6px;
   font-size: 15px;
   font-weight: 600;
-  color: #1a202c;
+  color: var(--text-heading);
 }
 .feature-desc {
   margin: 0;
   font-size: 12px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
   line-height: 1.5;
 }
 

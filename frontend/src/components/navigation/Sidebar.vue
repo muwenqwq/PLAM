@@ -47,8 +47,8 @@ const bottomMenus = computed(() => {
 <style scoped>
 .sidebar {
   width: 260px;
-  background-color: #ffffff;
-  border-right: 1px solid #edf2f7;
+  background-color: var(--bg-card);
+  border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   padding: 24px 16px;
@@ -67,7 +67,7 @@ const bottomMenus = computed(() => {
 .logo-text {
   font-size: 18px;
   font-weight: 600;
-  color: #1a202c;
+  color: var(--text-heading);
 }
 
 .nav-menu {
@@ -83,7 +83,7 @@ const bottomMenus = computed(() => {
   gap: 12px;
   padding: 12px 16px;
   text-decoration: none;
-  color: #4a5568;
+  color: var(--text-muted);
   border-radius: 8px;
   font-size: 15px;
   font-weight: 500;
@@ -91,13 +91,13 @@ const bottomMenus = computed(() => {
 }
 
 .nav-item:hover {
-  background-color: #f7fafc;
+  background-color: var(--bg-hover);
 }
 
 /* 高亮选中状态 */
 .nav-item.active {
-  background-color: #e6f0fd; /* 浅蓝色背景 */
-  color: #2b6cb0; /* 深蓝色文字 */
+  background-color: var(--color-primary-bg);
+  color: var(--color-primary-dark);
   font-weight: 600;
 }
 
@@ -110,7 +110,7 @@ const bottomMenus = computed(() => {
 
 .divider {
   height: 1px;
-  background-color: #edf2f7;
+  background-color: var(--border-light);
   margin: 16px 12px;
 }
 </style>

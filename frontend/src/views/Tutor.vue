@@ -114,8 +114,7 @@ watch(() => tutorStore.messages.length, scrollToBottom)
   gap: 20px;
   height: calc(100vh - 140px);
 }
-.page-header h2 { margin: 0 0 4px; font-size: 20px; color: #1a202c; }
-.page-header p { margin: 0; font-size: 14px; color: #718096; }
+/* .page-header 样式已移至 style.css 全局定义 */
 .chat-card {
   border-radius: 12px;
   flex: 1;
@@ -149,7 +148,7 @@ watch(() => tutorStore.messages.length, scrollToBottom)
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #f0f2f5;
+  background: var(--bg-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -159,14 +158,14 @@ watch(() => tutorStore.messages.length, scrollToBottom)
   display: flex;
   gap: 4px;
   padding: 12px 16px;
-  background: #f7fafc;
+  background: var(--bg-hover);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-default);
 }
 .typing-dots span {
   width: 8px;
   height: 8px;
-  background: #a0aec0;
+  background: var(--text-placeholder);
   border-radius: 50%;
   animation: typing 1.4s infinite;
 }
@@ -180,11 +179,11 @@ watch(() => tutorStore.messages.length, scrollToBottom)
 /* 输入区域 */
 .chat-input {
   padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-divider);
 }
 .chat-input :deep(.el-input-group__append) {
-  background: #3182ce;
-  border-color: #3182ce;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 .chat-input :deep(.el-input-group__append .el-button) {
   color: white;
@@ -195,6 +194,6 @@ watch(() => tutorStore.messages.length, scrollToBottom)
   align-items: center;
   margin-top: 8px;
   font-size: 12px;
-  color: #a0aec0;
+  color: var(--text-placeholder);
 }
 </style>
