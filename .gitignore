@@ -74,6 +74,12 @@ dist/
 *.sqlite3
 
 # ====================
+# Python AI 服务
+# ====================
+**/venv/
+chroma_data/
+
+# ====================
 # Docker
 # ====================
 docker-compose.override.yml
