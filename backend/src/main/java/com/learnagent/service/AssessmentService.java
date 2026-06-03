@@ -104,6 +104,7 @@ public class AssessmentService {
         result.setKnowledgePointId(req.getKnowledgePointId());
         result.setResourceId(req.getResourceId());
         result.setTaskId(taskId);
+        result.setQuizTitle("练习评估");  // NOT NULL 必须赋值
         result.setScore(BigDecimal.valueOf(aiResp.getScore()));
         result.setTotalScore(BigDecimal.valueOf(aiResp.getTotalScore()));
         result.setSubmittedAt(LocalDateTime.now());

@@ -89,6 +89,7 @@ public class ResourceService {
         aiReq.setKnowledgePointName(kpName);
         aiReq.setProfileJson(profileMap);
         aiReq.setResourceTypes(req.getResourceTypes());
+        aiReq.setCourseChunks(Collections.emptyList());  // 必填，否则 Python 422
 
         AiResourceResponse aiResp = aiServiceClient.generateResources(aiReq);
 

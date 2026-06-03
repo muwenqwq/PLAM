@@ -7,7 +7,8 @@ load_dotenv()
 
 
 class Settings:
-    # LLM (Anthropic 兼容接口)
+    # LLM 通用
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "anthropic")  # anthropic | openai
     LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "")
     LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
     LLM_MODEL: str = os.getenv("LLM_MODEL", "mimo-v2.5-pro")

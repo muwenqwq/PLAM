@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 
 const request = axios.create({
   baseURL: '/api',
-  timeout: 30000
+  timeout: 120000  // 2 分钟，AI 操作可能较慢
 })
 
 // 请求拦截器：自动携带 token
@@ -31,6 +31,10 @@ request.interceptors.response.use(
     if (data.code !== undefined && data.code !== 0 && data.code !== 200) {
       ElMessage.error(data.message || '请求失败')
       return Promise.reject(new Error(data.message || '请求失败'))
+    }
+    // 剥掉业务层 {code, data} 包装，直接返回 payload，Store 无需关心包装
+    if (data.data !== undefined) {
+      return data.data
     }
     return data
   },
