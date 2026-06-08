@@ -14,14 +14,16 @@ Java 后端是系统主后端，负责业务流程、数据库读写、接口响
 - Spring Boot 3.x
 - Maven
 - Spring Web
+- Spring Security
 - Validation
 - MyBatis-Plus
 - MySQL 8
 - Redis 配置预留
 - Lombok
 - Knife4j / Swagger OpenAPI
+- JWT
 
-本阶段未启用 Spring Security 和 JWT，后续认证安全阶段再引入完整鉴权。
+第 3 阶段已启用 Spring Security 和 JWT。认证模块只处理登录、注册、当前用户和基础角色查询，不扩展业务 CRUD。
 
 ## 4. 包结构
 

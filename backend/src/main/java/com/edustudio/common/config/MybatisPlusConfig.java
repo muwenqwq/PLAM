@@ -8,7 +8,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@MapperScan("com.edustudio.**.mapper")
+@MapperScan({
+        "com.edustudio.module.user.mapper",
+        "com.edustudio.module.role.mapper"
+})
 public class MybatisPlusConfig {
 
     @Bean

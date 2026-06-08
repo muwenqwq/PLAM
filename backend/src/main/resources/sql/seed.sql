@@ -3,19 +3,19 @@
 --
 -- Demo accounts for local demonstration only:
 -- 1. username: demo_admin
---    plaintext password: password
---    BCrypt database value: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+--    plaintext password: 123456
+--    BCrypt database value: $2a$10$4TByW6RaL8Rhj3LIXzEeGeWlACrRhJtlzDTH4IRgIYpJaDnIUnqea
 --    role: ADMIN
 -- 2. username: demo_teacher
---    plaintext password: password
---    BCrypt database value: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+--    plaintext password: 123456
+--    BCrypt database value: $2a$10$4TByW6RaL8Rhj3LIXzEeGeWlACrRhJtlzDTH4IRgIYpJaDnIUnqea
 --    role: TEACHER
 -- 3. username: demo_student
---    plaintext password: password
---    BCrypt database value: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+--    plaintext password: 123456
+--    BCrypt database value: $2a$10$4TByW6RaL8Rhj3LIXzEeGeWlACrRhJtlzDTH4IRgIYpJaDnIUnqea
 --    role: STUDENT
 --
--- The password hash above is a standard BCrypt hash for the plaintext password "password".
+-- The password hash above is a BCrypt hash for the plaintext password "123456".
 -- Replace all demo credentials before production deployment.
 -- No plaintext API key is stored in this seed file. The model provider uses Mock mode.
 
@@ -28,11 +28,11 @@ VALUES
   (2, 'TEACHER', '教师用户', '负责课程空间、学习资源和测验管理。', 'active'),
   (3, 'STUDENT', '学生用户', '负责学习空间、个性化学习和在线测验。', 'active');
 
-INSERT INTO sys_user (id, username, password, nickname, email, phone, avatar_url, user_type, status, last_login_at)
+INSERT INTO sys_user (id, username, password_hash, nickname, email, phone, avatar_url, user_type, status, last_login_at)
 VALUES
-  (1, 'demo_admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '演示管理员', 'admin@example.com', NULL, NULL, 'admin', 'active', CURRENT_TIMESTAMP),
-  (2, 'demo_teacher', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '数据库课程教师', 'teacher@example.com', NULL, NULL, 'teacher', 'active', CURRENT_TIMESTAMP),
-  (3, 'demo_student', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '学生演示账号', 'student@example.com', NULL, NULL, 'student', 'active', CURRENT_TIMESTAMP);
+  (1, 'demo_admin', '$2a$10$4TByW6RaL8Rhj3LIXzEeGeWlACrRhJtlzDTH4IRgIYpJaDnIUnqea', '演示管理员', 'admin@example.com', NULL, NULL, 'admin', 'active', CURRENT_TIMESTAMP),
+  (2, 'demo_teacher', '$2a$10$4TByW6RaL8Rhj3LIXzEeGeWlACrRhJtlzDTH4IRgIYpJaDnIUnqea', '数据库课程教师', 'teacher@example.com', NULL, NULL, 'teacher', 'active', CURRENT_TIMESTAMP),
+  (3, 'demo_student', '$2a$10$4TByW6RaL8Rhj3LIXzEeGeWlACrRhJtlzDTH4IRgIYpJaDnIUnqea', '学生演示账号', 'student@example.com', NULL, NULL, 'student', 'active', CURRENT_TIMESTAMP);
 
 INSERT INTO sys_user_role (id, user_id, role_id, status)
 VALUES

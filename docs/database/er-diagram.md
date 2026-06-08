@@ -40,7 +40,7 @@ erDiagram
     SYS_USER {
         bigint id PK
         varchar username UK
-        varchar password
+        varchar password_hash
         varchar user_type
         varchar status
         datetime created_at

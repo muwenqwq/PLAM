@@ -59,7 +59,7 @@
 
 - `sys_user` 与 `sys_role` 通过 `sys_user_role` 建立多对多关系。
 - `sys_user.username` 唯一，用于登录。
-- `sys_user.password` 保存 BCrypt 哈希，不保存明文密码。
+- `sys_user.password_hash` 保存 BCrypt 哈希，不保存明文密码。
 
 ### 4.2 学习空间与画像
 

@@ -2,7 +2,7 @@
 
 ## 1. 接口前缀
 
-后端接口统一使用 `/api` 前缀。当前阶段只开放健康检查接口，后续业务模块继续沿用该前缀。
+后端接口统一使用 `/api` 前缀。当前阶段已开放健康检查接口和认证安全接口，后续业务模块继续沿用该前缀。
 
 ## 2. 统一响应
 
@@ -83,7 +83,52 @@ GET /api/health/db
 
 MySQL 启动时返回 `connected = true`。MySQL 未启动时返回 `connected = false` 和失败信息，但接口本身仍然返回统一成功响应，便于前端和开发者调试。
 
-## 5. 错误响应
+## 5. 认证接口
+
+### 5.1 注册
+
+```http
+POST /api/auth/register
+```
+
+注册成功后返回用户基础信息和角色列表，不返回密码哈希。
+
+### 5.2 登录
+
+```http
+POST /api/auth/login
+```
+
+登录成功后返回 `Bearer` 类型 JWT、过期时间、用户信息和角色列表。
+
+### 5.3 当前用户
+
+```http
+GET /api/auth/me
+Authorization: Bearer <token>
+```
+
+返回当前登录用户信息。
+
+### 5.4 退出登录
+
+```http
+POST /api/auth/logout
+Authorization: Bearer <token>
+```
+
+当前阶段只返回退出成功，Redis 黑名单后续扩展。
+
+### 5.5 用户模块当前用户
+
+```http
+GET /api/users/me
+Authorization: Bearer <token>
+```
+
+返回当前登录用户资料，便于后续扩展用户资料维护。
+
+## 6. 错误响应
 
 参数错误：
 
@@ -111,7 +156,19 @@ MySQL 启动时返回 `connected = true`。MySQL 未启动时返回 `connected =
 
 后端不会把完整异常堆栈直接返回给前端。
 
-## 6. 接口文档地址
+未认证：
+
+```json
+{
+  "code": "401",
+  "message": "请先登录",
+  "data": null,
+  "timestamp": "2026-06-03T10:00:00",
+  "success": false
+}
+```
+
+## 7. 接口文档地址
 
 - Swagger UI：`/swagger-ui.html`
 - Knife4j：`/doc.html`

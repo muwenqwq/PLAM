@@ -16,7 +16,7 @@
 
 ## 当前阶段范围
 
-第 2 阶段只完成后端基础工程：
+第 2 阶段完成后端基础工程，第 3 阶段已接入认证安全模块：
 
 - 启动类
 - 统一响应 `Result<T>`
@@ -26,8 +26,13 @@
 - OpenAPI / Knife4j 配置
 - CORS 配置
 - 健康检查接口
+- Spring Security 无状态鉴权
+- JWT 生成与解析
+- 用户注册、登录、退出和当前用户接口
+- BCrypt 密码加密与校验
+- 基础角色查询
 
-本阶段不实现认证、安全、模型配置、学习空间等业务模块。
+当前仍不实现模型配置、学习空间、对话、多智能体等业务模块。
 
 ## 启动方式
 
@@ -42,9 +47,21 @@ mvn spring-boot:run
 
 - 健康检查：`http://localhost:8080/api/health`
 - 数据库检查：`http://localhost:8080/api/health/db`
+- 登录接口：`http://localhost:8080/api/auth/login`
+- 当前用户：`http://localhost:8080/api/auth/me`
 - Swagger UI：`http://localhost:8080/swagger-ui.html`
 - Knife4j：`http://localhost:8080/doc.html`
 - OpenAPI JSON：`http://localhost:8080/v3/api-docs`
+
+## 演示账号
+
+导入 `seed.sql` 后可使用：
+
+| 用户名 | 明文密码 | 角色 |
+|---|---|---|
+| `demo_admin` | `123456` | `ADMIN` |
+| `demo_teacher` | `123456` | `TEACHER` |
+| `demo_student` | `123456` | `STUDENT` |
 
 ## 数据库初始化
 

@@ -65,14 +65,30 @@
 - `GET /api/health`
 - `GET /api/health/db`
 
+### 1.8 认证安全模块
+
+- 文件：`module/auth/controller/AuthController.java`
+- 文件：`module/auth/service/AuthService.java`
+- 文件：`module/user/controller/UserController.java`
+- 文件：`module/user/entity/SysUser.java`
+- 文件：`module/role/entity/SysRole.java`
+- 文件：`module/role/entity/SysUserRole.java`
+- 文件：`common/security/SecurityConfig.java`
+- 文件：`common/security/JwtTokenUtil.java`
+- 文件：`common/security/JwtAuthenticationFilter.java`
+
+当前提供：
+
+- 用户注册。
+- 用户登录。
+- BCrypt 密码加密与校验。
+- JWT 生成与解析。
+- 当前登录用户获取。
+- 基础角色查询。
+- `/api/**` 默认鉴权。
+- 认证失败和无权限失败统一 JSON 响应。
+
 ## 2. 后续模块计划
-
-第 3 阶段：认证安全模块。
-
-- `module/auth`
-- `module/user`
-- `module/role`
-- `common/security`
 
 第 4 阶段：核心业务 CRUD。
 

@@ -37,7 +37,7 @@ DROP TABLE IF EXISTS sys_user;
 CREATE TABLE sys_user (
   id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Primary key',
   username VARCHAR(64) NOT NULL COMMENT 'Login username',
-  password VARCHAR(128) NOT NULL COMMENT 'BCrypt password hash',
+  password_hash VARCHAR(128) NOT NULL COMMENT 'BCrypt password hash',
   nickname VARCHAR(64) NOT NULL COMMENT 'Display name',
   email VARCHAR(128) NULL COMMENT 'Email address',
   phone VARCHAR(32) NULL COMMENT 'Phone number',

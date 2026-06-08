@@ -42,6 +42,10 @@ springdoc:
 
 eduagent:
   api-prefix: /api
+  jwt:
+    secret: ${JWT_SECRET:eduagent-studio-dev-secret-change-in-production}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
+    issuer: ${JWT_ISSUER:eduagent-studio}
   ai-service:
     base-url: http://localhost:8000
 
