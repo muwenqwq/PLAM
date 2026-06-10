@@ -258,3 +258,6 @@ Authorization: Bearer <token>
 - 学习路径：`/api/learning-paths/generate`、`/api/learning-paths/today`、`/api/learning-path-items/{id}/status`
 - 测验掌握度：`/api/quizzes/generate`、`/api/quizzes/{id}/submit`、`/api/mastery/me`
 - 学习报告：`/api/reports/overview`、`/api/reports/generate`、`/api/reports/{id}/export`
+# 前端对接补充
+
+Vue 前端统一通过 `frontend/src/api/request.ts` 调用 Java 后端 `/api/**`。Axios 请求拦截器会自动添加 `Authorization: Bearer <token>`，响应拦截器会解包统一 `Result<T>`，并在 401 时清理登录状态跳转登录页。前端不直接调用 Python AI 服务。

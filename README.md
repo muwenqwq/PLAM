@@ -69,3 +69,21 @@ mysql -u root -p eduagent_studio < backend/src/main/resources/sql/seed.sql
 ## 后续阶段
 
 第 2 阶段将初始化 Java Spring Boot 主后端工程，接入 MySQL、MyBatis-Plus、统一响应、统一异常、Swagger / Knife4j，并为第 3 阶段认证安全模块做准备。
+# 冲刺包 3：Vue 前端与演示流程
+
+本阶段已创建完整 Vue 3 前端工程，位于 `frontend/`。前端采用 Vue 3、TypeScript、Vite、Element Plus、Pinia、Vue Router、Axios、ECharts、Markdown-it 和 Mermaid，覆盖首页、登录注册、Dashboard、学习空间、用户画像、模型配置、智能对话、Agent 工作台、知识库、资源生成、知识图谱、学习路径、测验评估、学习报告和演示帮助页面。
+
+前端只调用 Java 后端 `/api/**`，不直接调用 Python AI 服务。启动方式：
+
+```bash
+cd frontend
+npm install --cache ./.npm-cache
+npm run dev
+```
+
+构建验证：
+
+```bash
+cd frontend
+npm run build
+```
