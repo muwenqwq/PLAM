@@ -167,6 +167,43 @@ Authorization: Bearer <token>
 
 学习偏好不存在时返回默认偏好：Markdown 输出、中等难度、中文、启用知识图谱、启用测验和启用复习计划。
 
+### 6.4 AI 模型配置
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `POST` | `/api/model-providers` | 创建模型配置 |
+| `GET` | `/api/model-providers` | 分页查询模型配置 |
+| `GET` | `/api/model-providers/default` | 查询默认模型 |
+| `GET` | `/api/model-providers/{id}` | 查询模型详情 |
+| `PUT` | `/api/model-providers/{id}` | 更新模型配置 |
+| `DELETE` | `/api/model-providers/{id}` | 逻辑删除模型配置 |
+| `POST` | `/api/model-providers/{id}/default` | 设置默认模型 |
+| `POST` | `/api/model-providers/{id}/test` | 测试模型连接 |
+
+### 6.5 智能对话
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `POST` | `/api/chat/conversations` | 创建会话 |
+| `GET` | `/api/chat/conversations` | 分页查询会话 |
+| `GET` | `/api/chat/conversations/{id}` | 查询详情 |
+| `GET` | `/api/chat/conversations/{id}/messages` | 查询消息 |
+| `POST` | `/api/chat/conversations/{id}/messages` | 发送消息并保存 AI 回复 |
+| `POST` | `/api/chat/intent` | 识别消息意图 |
+
+### 6.6 Agent 任务与生成资源
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `POST` | `/api/agent-tasks` | 创建并同步执行 Agent 任务 |
+| `GET` | `/api/agent-tasks` | 分页查询任务 |
+| `GET` | `/api/agent-tasks/{id}` | 查询任务详情 |
+| `GET` | `/api/agent-tasks/{id}/steps` | 查询执行步骤 |
+| `POST` | `/api/agent-tasks/{id}/rerun` | 重新执行任务 |
+| `POST` | `/api/agent-tasks/{id}/save-resource` | 返回任务生成资源 |
+| `GET` | `/api/resources` | 分页查询生成资源 |
+| `GET` | `/api/resources/{id}` | 查询生成资源详情 |
+
 ## 7. 错误响应
 
 参数错误：

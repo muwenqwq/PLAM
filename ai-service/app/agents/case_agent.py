@@ -1,0 +1,2 @@
+class CaseAgent:
+    name = "CaseAgent"

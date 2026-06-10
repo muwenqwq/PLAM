@@ -1,0 +1,2 @@
+class AssessmentAgent:
+    name = "AssessmentAgent"

@@ -133,14 +133,32 @@
 
 偏好不存在时，后端返回默认偏好：Markdown 输出、中等难度、中文、启用知识图谱、启用测验和启用复习计划。默认偏好不会强制写入数据库，用户主动更新时再执行 upsert。
 
+### 1.12 AI 模型配置中心
+
+- 文件：`module/modelprovider/controller/ModelProviderController.java`
+- 文件：`module/modelprovider/service/ModelProviderService.java`
+
+当前提供模型配置 CRUD、默认模型设置、模型连接测试、API Key 加密存储和脱敏展示。用户没有配置模型时，后端会自动使用 Mock 模型配置作为 AI 调用兜底。
+
+### 1.13 智能对话模块
+
+- 文件：`module/chat/controller/ChatController.java`
+- 文件：`module/chat/service/ChatService.java`
+
+当前提供会话创建、会话列表、消息列表、发送消息和意图识别。发送消息时 Java 保存用户消息，调用 Python AI 服务，再保存 AI 回复。
+
+### 1.14 多智能体任务与资源模块
+
+- 文件：`module/agent/controller/AgentTaskController.java`
+- 文件：`module/resource/controller/GeneratedResourceController.java`
+
+当前采用同步执行策略：Java 保存任务，调用 Python Mock Agent，保存执行步骤和生成资源。后续可扩展为异步队列和任务进度推送。
+
 ## 2. 后续模块计划
 
 第 4 阶段后续部分：核心业务 CRUD。
 
-- 对话
 - 知识库元数据
-- 智能体任务
-- 生成资源
 - 学习路径
 - 测验
 - 报告

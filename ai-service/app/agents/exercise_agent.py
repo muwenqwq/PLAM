@@ -1,0 +1,2 @@
+class ExerciseAgent:
+    name = "ExerciseAgent"

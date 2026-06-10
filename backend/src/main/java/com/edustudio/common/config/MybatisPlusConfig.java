@@ -12,7 +12,11 @@ import org.springframework.context.annotation.Configuration;
         "com.edustudio.module.user.mapper",
         "com.edustudio.module.role.mapper",
         "com.edustudio.module.learningspace.mapper",
-        "com.edustudio.module.profile.mapper"
+        "com.edustudio.module.profile.mapper",
+        "com.edustudio.module.modelprovider.mapper",
+        "com.edustudio.module.chat.mapper",
+        "com.edustudio.module.agent.mapper",
+        "com.edustudio.module.resource.mapper"
 })
 public class MybatisPlusConfig {
 
