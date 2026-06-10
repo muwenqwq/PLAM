@@ -7,9 +7,10 @@ erDiagram
     SYS_USER ||--o{ SYS_USER_ROLE : has
     SYS_ROLE ||--o{ SYS_USER_ROLE : grants
     SYS_USER ||--o{ LEARNING_SPACE : owns
-    SYS_USER ||--|| USER_PROFILE : has
+    SYS_USER ||--o{ USER_PROFILE : profiles
     SYS_USER ||--|| LEARNING_PREFERENCE : has
     SYS_USER ||--o{ AI_MODEL_PROVIDER : configures
+    LEARNING_SPACE ||--o{ USER_PROFILE : customizes
 
     LEARNING_SPACE ||--o{ CONVERSATION : contains
     CONVERSATION ||--o{ CONVERSATION_MESSAGE : records
@@ -60,8 +61,38 @@ erDiagram
         bigint user_id
         varchar space_name
         varchar subject
+        tinyint is_default
         int resource_count
         int task_count
+        varchar status
+    }
+
+    USER_PROFILE {
+        bigint id PK
+        bigint user_id
+        bigint space_id
+        varchar learning_goal
+        varchar subject_direction
+        varchar foundation_level
+        json interest_tags
+        json weak_points
+        json available_time_slots
+        varchar output_style
+        varchar profile_source
+        varchar status
+    }
+
+    LEARNING_PREFERENCE {
+        bigint id PK
+        bigint user_id
+        json preferred_resource_types
+        varchar output_style
+        varchar content_length_preference
+        varchar difficulty_preference
+        varchar language_preference
+        tinyint knowledge_graph_enabled
+        tinyint quiz_enabled
+        tinyint review_plan_enabled
         varchar status
     }
 
@@ -154,6 +185,8 @@ erDiagram
 
 1. 用户是所有个人学习数据的归属主体，核心表都保留 `user_id`。
 2. 学习空间是学习活动的上下文，知识库、对话、任务、资源、路径、测验和报告都可以按 `space_id` 归档。
-3. 智能体任务通过 `agent_task` 和 `agent_step` 分离总体任务与分步骤执行记录，便于前端展示执行过程。
-4. 生成资源可来自智能体任务，也可在后续阶段支持人工创建或重新生成。
-5. 测验结果会更新掌握度记录，并用于学习报告。
+3. 用户画像既支持全局画像，也支持绑定到学习空间的画像。`space_id = 0` 表示全局画像。
+4. 学习偏好是用户级配置，缺失时由 Java 后端返回默认值，用户修改后再持久化。
+5. 智能体任务通过 `agent_task` 和 `agent_step` 分离总体任务与分步骤执行记录，便于前端展示执行过程。
+6. 生成资源可来自智能体任务，也可在后续阶段支持人工创建或重新生成。
+7. 测验结果会更新掌握度记录，并用于学习报告。

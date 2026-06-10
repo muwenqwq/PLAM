@@ -88,13 +88,55 @@
 - `/api/**` 默认鉴权。
 - 认证失败和无权限失败统一 JSON 响应。
 
+### 1.9 学习空间模块
+
+- 文件：`module/learningspace/controller/LearningSpaceController.java`
+- 文件：`module/learningspace/service/LearningSpaceService.java`
+- 文件：`module/learningspace/entity/LearningSpace.java`
+
+当前提供：
+
+- 创建、修改、逻辑删除学习空间。
+- 当前用户学习空间分页查询。
+- 学习空间详情、默认空间查询、设置默认空间。
+- 学习空间统计摘要。
+- 所有业务查询均通过 `LoginUserHolder` 获取当前用户，并携带 `user_id` 条件。
+
+删除默认学习空间时，后端会在用户剩余空间中选择最近更新的一条作为新的默认空间；若没有剩余空间，则用户暂时没有默认空间。
+
+### 1.10 用户画像模块
+
+- 文件：`module/profile/controller/UserProfileController.java`
+- 文件：`module/profile/service/UserProfileService.java`
+- 文件：`module/profile/entity/UserProfile.java`
+
+当前提供：
+
+- 查询、创建或更新当前用户全局画像。
+- 查询、创建或更新学习空间画像。
+- 学习目标、学科方向、基础水平、薄弱点、可用学习时间和输出风格维护。
+- 空间画像写入前会校验学习空间属于当前用户。
+
+全局画像使用 `space_id = 0` 存储；接口响应中全局画像的 `spaceId` 返回 `null`，空间画像返回实际学习空间 ID。
+
+### 1.11 学习偏好模块
+
+- 文件：`module/profile/controller/LearningPreferenceController.java`
+- 文件：`module/profile/service/LearningPreferenceService.java`
+- 文件：`module/profile/entity/LearningPreference.java`
+
+当前提供：
+
+- 查询当前用户学习偏好。
+- 创建或更新当前用户学习偏好。
+- 支持资源类型、内容长度、难度、输出语言、输出风格、知识图谱、测验和复习计划开关。
+
+偏好不存在时，后端返回默认偏好：Markdown 输出、中等难度、中文、启用知识图谱、启用测验和启用复习计划。默认偏好不会强制写入数据库，用户主动更新时再执行 upsert。
+
 ## 2. 后续模块计划
 
-第 4 阶段：核心业务 CRUD。
+第 4 阶段后续部分：核心业务 CRUD。
 
-- 学习空间
-- 用户画像
-- 学习偏好
 - 对话
 - 知识库元数据
 - 智能体任务

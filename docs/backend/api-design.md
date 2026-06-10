@@ -128,7 +128,46 @@ Authorization: Bearer <token>
 
 返回当前登录用户资料，便于后续扩展用户资料维护。
 
-## 6. 错误响应
+## 6. 核心业务接口
+
+以下接口均需要 `Authorization: Bearer <token>`，后端通过当前登录用户隔离数据，不允许访问其他用户资源。
+
+### 6.1 学习空间
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `POST` | `/api/learning-spaces` | 创建学习空间 |
+| `GET` | `/api/learning-spaces` | 分页查询当前用户学习空间 |
+| `GET` | `/api/learning-spaces/default` | 查询默认学习空间 |
+| `GET` | `/api/learning-spaces/{id}` | 查询学习空间详情 |
+| `PUT` | `/api/learning-spaces/{id}` | 更新学习空间 |
+| `DELETE` | `/api/learning-spaces/{id}` | 逻辑删除学习空间 |
+| `POST` | `/api/learning-spaces/{id}/default` | 设置默认学习空间 |
+| `GET` | `/api/learning-spaces/{id}/summary` | 查询学习空间摘要 |
+
+创建第一个学习空间时会自动设为默认空间。删除默认空间后，后端会把用户剩余空间中最近更新的一条设为默认空间；如果没有剩余空间，则默认空间为空。
+
+### 6.2 用户画像
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/api/profiles/me` | 查询当前用户全局画像 |
+| `PUT` | `/api/profiles/me` | 创建或更新当前用户全局画像 |
+| `GET` | `/api/profiles/space/{spaceId}` | 查询学习空间画像 |
+| `PUT` | `/api/profiles/space/{spaceId}` | 创建或更新学习空间画像 |
+
+全局画像不存在时返回空画像结构，`status` 为 `incomplete`。空间画像读写前会校验该学习空间属于当前登录用户。
+
+### 6.3 学习偏好
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/api/preferences/me` | 查询当前用户学习偏好 |
+| `PUT` | `/api/preferences/me` | 创建或更新当前用户学习偏好 |
+
+学习偏好不存在时返回默认偏好：Markdown 输出、中等难度、中文、启用知识图谱、启用测验和启用复习计划。
+
+## 7. 错误响应
 
 参数错误：
 
@@ -168,7 +207,7 @@ Authorization: Bearer <token>
 }
 ```
 
-## 7. 接口文档地址
+## 8. 接口文档地址
 
 - Swagger UI：`/swagger-ui.html`
 - Knife4j：`/doc.html`

@@ -40,20 +40,39 @@ VALUES
   (2, 2, 2, 'active'),
   (3, 3, 3, 'active');
 
-INSERT INTO learning_space (id, user_id, space_name, subject, description, cover_url, visibility, resource_count, task_count, status)
+INSERT INTO learning_space (id, user_id, space_name, subject, description, cover_url, visibility, is_default, resource_count, task_count, status)
 VALUES
-  (1, 3, '数据库系统期末复习', '数据库系统', '围绕范式、SQL 查询、索引和事务进行期末复习。', NULL, 'private', 2, 1, 'active'),
-  (2, 2, 'Java 后端课程备课', 'Java 软件开发', '面向 Spring Boot、REST API 和数据库设计的课程备课空间。', NULL, 'private', 1, 1, 'active');
+  (1, 3, '数据库系统期末复习', '数据库系统', '围绕范式、SQL 查询、索引和事务进行期末复习。', NULL, 'private', 1, 2, 1, 'active'),
+  (2, 2, 'Java 后端课程备课', 'Java 软件开发', '面向 Spring Boot、REST API 和数据库设计的课程备课空间。', NULL, 'private', 1, 1, 1, 'active');
 
-INSERT INTO user_profile (id, user_id, real_name, school, major, grade_level, learning_goal, foundation_level, interest_tags, target_exam, weekly_available_hours, status)
+INSERT INTO user_profile (
+  id, user_id, space_id, real_name, school, major, grade_level, learning_goal, subject_direction,
+  foundation_level, interest_tags, weak_points, target_exam, weekly_available_hours,
+  available_time_slots, output_style, profile_source, status
+)
 VALUES
-  (1, 3, '张同学', '示例大学', '软件工程', '大三', '两周内系统复习数据库系统，重点掌握范式、SQL 查询优化和索引设计。', 'intermediate', '["数据库","后端开发","软件杯"]', '数据库系统期末考试', 8.00, 'active'),
-  (2, 2, '李老师', '示例大学', '计算机科学与技术', '教师', '准备数据库与 Java 后端课程的课堂讲义、案例和测验。', 'advanced', '["教学设计","Java","数据库"]', NULL, 6.00, 'active');
+  (1, 3, 0, '张同学', '示例大学', '软件工程', '大三', '两周内系统复习数据库系统，重点掌握范式、SQL 查询优化和索引设计。', '数据库系统',
+   'intermediate', '["数据库","后端开发","软件杯"]', '["事务隔离级别","索引优化"]', '数据库系统期末考试', 8.00,
+   '["weekday_evening","weekend_morning"]', 'markdown', 'manual', 'active'),
+  (2, 2, 0, '李老师', '示例大学', '计算机科学与技术', '教师', '准备数据库与 Java 后端课程的课堂讲义、案例和测验。', 'Java 后端开发',
+   'advanced', '["教学设计","Java","数据库"]', '["课堂案例设计"]', NULL, 6.00,
+   '["weekday_afternoon"]', 'detailed', 'manual', 'active'),
+  (3, 3, 1, '张同学', '示例大学', '软件工程', '大三', '完成数据库系统期末复习并生成错题训练。', '数据库系统',
+   'intermediate', '["数据库","SQL","索引"]', '["范式判断","复杂查询"]', '数据库系统期末考试', 6.00,
+   '["weekday_evening"]', 'markdown', 'manual', 'active');
 
-INSERT INTO learning_preference (id, user_id, preferred_resource_types, output_style, difficulty_preference, language_preference, study_time_slots, notification_enabled, status)
+INSERT INTO learning_preference (
+  id, user_id, preferred_resource_types, output_style, content_length_preference,
+  difficulty_preference, language_preference, study_time_slots, notification_enabled,
+  knowledge_graph_enabled, quiz_enabled, review_plan_enabled, status
+)
 VALUES
-  (1, 3, '["学习计划","复习提纲","习题集","知识图谱"]', 'structured', 'adaptive', 'zh-CN', '["weekday_evening","weekend_morning"]', 1, 'active'),
-  (2, 2, '["课程讲义","案例任务","测验题"]', 'detailed', 'normal', 'zh-CN', '["weekday_afternoon"]', 0, 'active');
+  (1, 3, '["学习计划","复习提纲","习题集","知识图谱"]', 'markdown', 'medium',
+   'medium', 'zh-CN', '["weekday_evening","weekend_morning"]', 1,
+   1, 1, 1, 'active'),
+  (2, 2, '["课程讲义","案例任务","测验题"]', 'detailed', 'long',
+   'adaptive', 'zh-CN', '["weekday_afternoon"]', 0,
+   1, 1, 0, 'active');
 
 INSERT INTO ai_model_provider (
   id, user_id, provider_name, provider_type, base_url, api_key_encrypted, api_key_masked,

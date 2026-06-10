@@ -64,7 +64,10 @@
 ### 4.2 学习空间与画像
 
 - 一个用户可以拥有多个 `learning_space`。
-- 一个用户对应一份 `user_profile` 和一份 `learning_preference`。
+- `learning_space.is_default` 表示当前用户默认学习空间。一个用户最多应有一个有效默认空间，该约束由 Java Service 层在设置默认空间时统一维护。
+- `user_profile` 支持全局画像和空间画像：`space_id = 0` 表示当前用户全局画像，`space_id > 0` 表示绑定到某个学习空间的画像。
+- `user_profile` 使用 `uk_user_profile_user_space_deleted(user_id, space_id, deleted)` 保证同一用户、同一画像范围只有一条有效记录。
+- 一个用户对应一份 `learning_preference`，偏好不存在时后端返回默认偏好，用户修改后再写入数据库。
 - 学习空间承载对话、知识库、智能体任务、资源、路径、测验和报告。
 
 ### 4.3 AI 模型配置

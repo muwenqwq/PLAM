@@ -42,6 +42,8 @@ JSON 字段用于保存结构化 AI 输入输出，例如 `input_params`、`resu
 |---|---|---|
 | `learning_space` | `resource_count` | Dashboard 和空间列表快速展示资源数量 |
 | `learning_space` | `task_count` | 快速展示空间内智能体任务数量 |
+| `learning_space` | `is_default` | 快速定位当前用户默认学习空间，避免每次额外计算 |
+| `user_profile` | `space_id = 0` | 用固定值表达全局画像范围，便于唯一约束和 MyBatis-Plus 查询 |
 | `conversation` | `message_count` | 对话列表无需每次统计消息表 |
 | `knowledge_file` | `chunk_count` | 文件列表快速展示解析切片数量 |
 | `generated_resource` | `output_summary` | 资源列表快速展示摘要 |
@@ -53,7 +55,7 @@ JSON 字段用于保存结构化 AI 输入输出，例如 `input_params`、`resu
 
 ## 6. 逻辑删除与范式
 
-所有业务表包含 `deleted` 字段。逻辑删除会让唯一约束和业务查询更复杂，因此部分唯一索引包含 `deleted` 字段，例如 `uk_user_profile_user_deleted`。这样可以保留历史数据，同时避免有效数据重复。
+所有业务表包含 `deleted` 字段。逻辑删除会让唯一约束和业务查询更复杂，因此部分唯一索引包含 `deleted` 字段，例如 `uk_user_profile_user_space_deleted`。这样可以保留历史数据，同时避免有效数据重复。
 
 ## 7. 后续扩展建议
 

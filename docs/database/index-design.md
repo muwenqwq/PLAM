@@ -16,7 +16,7 @@
 | `sys_user` | `uk_sys_user_email` | 邮箱唯一，便于后续找回密码 |
 | `sys_role` | `uk_sys_role_code` | 角色编码唯一 |
 | `sys_user_role` | `uk_sys_user_role_user_role_deleted` | 防止同一用户重复绑定同一角色 |
-| `user_profile` | `uk_user_profile_user_deleted` | 一个用户一份学习画像 |
+| `user_profile` | `uk_user_profile_user_space_deleted` | 同一用户、同一画像范围只有一份有效画像 |
 | `learning_preference` | `uk_learning_preference_user_deleted` | 一个用户一份学习偏好 |
 | `knowledge_chunk` | `uk_knowledge_chunk_file_index_deleted` | 同一文件内切片序号唯一 |
 | `agent_step` | `uk_agent_step_task_order_deleted` | 同一任务内步骤序号唯一 |
@@ -30,12 +30,14 @@
 ### 3.1 用户维度
 
 - `idx_learning_space_user_status(user_id, status, deleted)`
+- `idx_learning_space_user_default(user_id, is_default, deleted)`
+- `idx_user_profile_space(space_id, deleted)`
 - `idx_ai_model_provider_user_default(user_id, is_default, deleted)`
 - `idx_conversation_user_status(user_id, status, deleted)`
 - `idx_agent_task_user_status(user_id, execution_status, deleted)`
 - `idx_generated_resource_user_type(user_id, resource_type, deleted)`
 
-这些索引用于“我的学习空间”“我的默认模型”“我的对话”“我的任务”“我的资源”等核心页面。
+这些索引用于“我的学习空间”“我的默认学习空间”“空间画像”“我的默认模型”“我的对话”“我的任务”“我的资源”等核心页面。
 
 ### 3.2 学习空间维度
 
