@@ -190,3 +190,6 @@ erDiagram
 5. 智能体任务通过 `agent_task` 和 `agent_step` 分离总体任务与分步骤执行记录，便于前端展示执行过程。
 6. 生成资源可来自智能体任务，也可在后续阶段支持人工创建或重新生成。
 7. 测验结果会更新掌握度记录，并用于学习报告。
+# 冲刺包 2 ER 图补充说明
+
+本阶段实现的知识库、资源、学习路径、测验、掌握度和报告后端闭环，仍使用既有 Mermaid ER 图中的 `KNOWLEDGE_FILE`、`KNOWLEDGE_CHUNK`、`GENERATED_RESOURCE`、`LEARNING_PATH`、`LEARNING_PATH_ITEM`、`QUIZ`、`QUIZ_QUESTION`、`QUIZ_ANSWER`、`MASTERY_RECORD`、`LEARNING_REPORT` 实体关系，不新增表关系。

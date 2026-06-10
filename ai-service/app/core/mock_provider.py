@@ -124,13 +124,80 @@ class MockLLMProvider(LLMProvider):
         )
 
     def generate_resource(self, request: ResourceGenerateRequest) -> ResourceGenerateResponse:
+        resource_type = request.resource_type or "plan"
+        subject = request.subject or request.title
+        points = request.input_params.get("knowledge_points") or [subject, "核心概念", "典型应用"]
+        if resource_type == "knowledge_graph":
+            mermaid = (
+                "graph TD\n"
+                f"  A[{subject}] --> B[核心概念]\n"
+                f"  A --> C[典型应用]\n"
+                f"  A --> D[易错点]\n"
+                "  B --> E[定义与条件]\n"
+                "  C --> F[例题训练]\n"
+                "  D --> G[错因复盘]\n"
+            )
+            content = f"# {subject} 知识图谱\n\n```mermaid\n{mermaid}```\n\n## 使用建议\n先按图谱理解依赖关系，再逐个补齐薄弱节点。"
+            resources = [
+                GeneratedResource(
+                    resource_type=resource_type,
+                    title=f"{subject} 知识图谱",
+                    subject=subject,
+                    knowledge_points=points,
+                    content_markdown=content,
+                    content_json={"mock": True, "mermaid": mermaid, "nodes": points},
+                    output_summary=f"已生成 {subject} Mermaid 知识图谱。",
+                    quality_score=90.0,
+                )
+            ]
+            return ResourceGenerateResponse(success=True, resources=resources)
+        if resource_type == "quiz_set":
+            questions = [
+                {"type": "single_choice", "stem": f"{subject} 的学习重点是什么？", "answer": "理解概念并练习应用"},
+                {"type": "judge", "stem": "错题复盘能提升掌握度。", "answer": "正确"},
+                {"type": "short_answer", "stem": f"简述 {subject} 的复习方法。", "answer": "概念、例题、错因、复盘"},
+            ]
+            content = "# 习题集\n\n" + "\n".join([f"{idx}. {item['stem']}" for idx, item in enumerate(questions, start=1)])
+            resources = [
+                GeneratedResource(
+                    resource_type=resource_type,
+                    title=f"{subject} 习题集",
+                    subject=subject,
+                    knowledge_points=points,
+                    content_markdown=content,
+                    content_json={"mock": True, "questions": questions},
+                    output_summary="已生成可演示的结构化习题集。",
+                    quality_score=87.0,
+                )
+            ]
+            return ResourceGenerateResponse(success=True, resources=resources)
+        if resource_type == "ppt_outline":
+            slides = [
+                {"page": 1, "title": "学习目标", "bullets": [f"理解 {subject}", "明确产出要求"]},
+                {"page": 2, "title": "核心概念", "bullets": points[:3]},
+                {"page": 3, "title": "练习与复盘", "bullets": ["典型例题", "错因分析", "后续计划"]},
+            ]
+            content = "# PPT 大纲\n\n" + "\n".join([f"## {item['page']}. {item['title']}" for item in slides])
+            resources = [
+                GeneratedResource(
+                    resource_type=resource_type,
+                    title=f"{subject} PPT 大纲",
+                    subject=subject,
+                    knowledge_points=points,
+                    content_markdown=content,
+                    content_json={"mock": True, "slides": slides},
+                    output_summary="已生成分页面向展示的 PPT 大纲。",
+                    quality_score=86.0,
+                )
+            ]
+            return ResourceGenerateResponse(success=True, resources=resources)
         agent_result = self.run_agents(
             AgentRunRequest(
                 model=request.model,
                 title=request.title,
                 task_type="resource_generation",
                 subject=request.subject,
-                resource_type=request.resource_type,
+                resource_type=resource_type,
                 input_params=request.input_params,
             )
         )

@@ -113,3 +113,8 @@
 mysql -u root -p < backend/src/main/resources/sql/schema.sql
 mysql -u root -p eduagent_studio < backend/src/main/resources/sql/seed.sql
 ```
+# 冲刺包 2 数据库补充说明
+
+本阶段未新增或重命名数据库字段，继续复用第 1 阶段已设计的核心表：`knowledge_file`、`knowledge_chunk`、`generated_resource`、`learning_path`、`learning_path_item`、`quiz`、`quiz_question`、`quiz_answer`、`mastery_record`、`learning_report`。
+
+上述表已经覆盖知识库、资源生成、学习路径、测验评分、掌握度和报告闭环。保持 schema 稳定有利于后续 MyBatis-Plus Entity、Mapper 和前端联调，避免频繁迁移影响答辩演示数据。

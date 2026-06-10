@@ -1,20 +1,21 @@
-# 多智能体任务与资源生成说明
+# 资源生成中心说明
 
-## 1. 模块定位
+## 支持资源类型
 
-多智能体任务模块用于把学习目标转化为可保存的学习资源。当前阶段采用同步执行方式，先打通演示链路，后续再升级为异步任务队列。
+资源生成中心基于 `generated_resource` 表保存最终结果，当前支持：
 
-## 2. 当前流程
+- 学习计划：`plan`
+- 讲义：`lecture_note`
+- 复习提纲：`review_outline`
+- 习题集：`quiz_set`
+- 案例任务：`case_task`
+- 知识图谱：`knowledge_graph`
+- PPT 大纲：`ppt_outline`
 
-1. 用户创建 Agent 任务。
-2. Java 保存 `agent_task`，状态为 `running`。
-3. Java 调用 Python `/ai/agents/run`。
-4. Python Mock 返回多个 Agent 步骤和最终资源。
-5. Java 保存 `agent_step`。
-6. Java 保存 `generated_resource`。
-7. Java 更新任务状态为 `succeeded` 或 `failed`。
+## Mermaid 知识图谱
 
-## 3. 后续扩展
+`knowledge_graph` 类型资源必须在 `content_markdown` 中保存 Mermaid 代码块，并在 `content_json.mermaid` 中保存 Mermaid 原文，便于前端渲染和后续导出。
 
-后续可引入 Redis 队列、任务状态轮询、SSE/WebSocket 推送、RAG 知识库检索和更细粒度的 Agent 协作。
+## 导出策略
 
+当前阶段 Markdown 导出直接返回字符串，不生成实际文件。后续部署阶段可扩展为异步导出任务，并将文件路径写入 `export_status` 或新增导出记录表。

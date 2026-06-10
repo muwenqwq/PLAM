@@ -169,3 +169,13 @@
 - 模型配置 CRUD
 - API Key 加密与脱敏
 - Mock 和真实模型连接测试
+# 冲刺包 2 后端模块补充说明
+
+本阶段新增 `knowledge`、`learningpath`、`quiz`、`report` 模块，并增强 `resource` 模块。新增模块均采用 Controller、Service、Mapper、Entity、DTO、VO 分层结构；业务查询均通过当前登录用户 `user_id` 隔离。
+
+- `module/knowledge`：知识库文件元数据、Mock RAG 索引、检索和问答。
+- `module/resource`：资源生成中心、Markdown 导出、Mermaid 知识图谱生成。
+- `module/learningpath`：学习路径生成、任务状态更新、今日任务和路径调整。
+- `module/quiz`：测验生成、规则评分、测验分析。
+- `module/profile/MasteryRecord`：知识点掌握度记录。
+- `module/report`：学习概览、报告生成、报告查询和 Markdown 导出。

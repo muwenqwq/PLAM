@@ -249,3 +249,12 @@ Authorization: Bearer <token>
 - Swagger UI：`/swagger-ui.html`
 - Knife4j：`/doc.html`
 - OpenAPI JSON：`/v3/api-docs`
+# 冲刺包 2 API 补充说明
+
+本阶段新增知识库、资源生成、学习路径、测验掌握度和学习报告接口。所有业务接口均要求登录，均使用 `/api` 前缀和统一 `Result<T>` / `PageResult<T>` 响应。
+
+- 知识库：`/api/knowledge/files`、`/api/knowledge/search`、`/api/knowledge/qa`
+- 资源生成：`/api/resources/generate`、`/api/resources/{id}/graph`、`/api/resources/{id}/export/markdown`
+- 学习路径：`/api/learning-paths/generate`、`/api/learning-paths/today`、`/api/learning-path-items/{id}/status`
+- 测验掌握度：`/api/quizzes/generate`、`/api/quizzes/{id}/submit`、`/api/mastery/me`
+- 学习报告：`/api/reports/overview`、`/api/reports/generate`、`/api/reports/{id}/export`

@@ -1,11 +1,18 @@
-# 多智能体工作流
+# Python AI 服务工作流说明
 
-当前 Mock 工作流包含：
+Python AI 服务当前提供模型测试、对话、多智能体 Mock、资源生成、RAG、学习路径、测验和报告生成能力。它不直接访问 MySQL，也不承担业务权限判断。
 
-1. `PlannerAgent`：拆分学习目标和阶段。
-2. `KnowledgeAgent`：抽取知识点和薄弱点。
-3. `ExerciseAgent`：生成练习建议。
-4. `ReviewAgent`：检查质量并给出评分。
+## 工作流边界
 
-Python 返回 steps 和 resources，Java 负责保存到 `agent_step` 与 `generated_resource`。
+1. Java 负责认证、权限、业务事务和数据库写入。
+2. Python 负责生成结构化 Mock 结果。
+3. 前端只调用 Java 后端。
+4. AI 服务不可用时，Java 通过统一异常返回可诊断信息。
 
+## 新增接口
+
+- `/ai/learning-paths/generate`
+- `/ai/learning-paths/adjust`
+- `/ai/quizzes/generate`
+- `/ai/quizzes/analyze`
+- `/ai/reports/generate`
