@@ -1,0 +1,56 @@
+server:
+  address: 0.0.0.0
+  port: 8080
+
+spring:
+  application:
+    name: eduagent-studio-backend
+  profiles:
+    active: dev
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+eduagent:
+  api-prefix: /api
+  jwt:
+    secret: ${JWT_SECRET:eduagent-studio-dev-secret-change-in-production}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
+    issuer: ${JWT_ISSUER:eduagent-studio}
+  ai-service:
+    base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
+
+logging:
+  level:
+    root: INFO
+    com.edustudio: INFO

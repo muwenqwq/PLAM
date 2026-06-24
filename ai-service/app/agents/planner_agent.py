@@ -1,0 +1,2 @@
+class PlannerAgent:
+    name = "PlannerAgent"
