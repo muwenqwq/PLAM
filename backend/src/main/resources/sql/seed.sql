@@ -17,7 +17,7 @@
 --
 -- The password hash above is a BCrypt hash for the plaintext password "123456".
 -- Replace all demo credentials before production deployment.
--- No plaintext API key is stored in this seed file. The model provider uses Mock mode.
+-- No plaintext API key is stored in this seed file. The model provider uses local demo mode.
 
 SET NAMES utf8mb4;
 USE eduagent_studio;
@@ -52,7 +52,7 @@ INSERT INTO user_profile (
 )
 VALUES
   (1, 3, 0, '张同学', '示例大学', '软件工程', '大三', '两周内系统复习数据库系统，重点掌握范式、SQL 查询优化和索引设计。', '数据库系统',
-   'intermediate', '["数据库","后端开发","软件杯"]', '["事务隔离级别","索引优化"]', '数据库系统期末考试', 8.00,
+   'intermediate', '["数据库","后端开发","软件设计"]', '["事务隔离级别","索引优化"]', '数据库系统期末考试', 8.00,
    '["weekday_evening","weekend_morning"]', 'markdown', 'manual', 'active'),
   (2, 2, 0, '李老师', '示例大学', '计算机科学与技术', '教师', '准备数据库与 Java 后端课程的课堂讲义、案例和测验。', 'Java 后端开发',
    'advanced', '["教学设计","Java","数据库"]', '["课堂案例设计"]', NULL, 6.00,
@@ -79,11 +79,40 @@ INSERT INTO ai_model_provider (
   model_name, embedding_model, temperature, max_tokens, stream_enabled, is_default, status, remark
 )
 VALUES
-  (1, 3, '本地 Mock 模型', 'mock', 'mock://local/llm', NULL, 'MOCK-ONLY', 'mock-chat-v1', 'mock-embedding-v1', 0.70, 2048, 1, 1, 'active', '用于无真实 API Key 的完整演示。'),
-  (2, 2, '教师演示 Mock 模型', 'mock', 'mock://local/teacher-llm', NULL, 'MOCK-ONLY', 'mock-teacher-v1', 'mock-embedding-v1', 0.60, 2048, 1, 1, 'active', '教师备课场景演示配置。');
+  (1, 3, '本地演示模型', 'mock', 'mock://local/llm', NULL, 'DEMO-ONLY', 'mock-chat-v1', 'mock-embedding-v1', 0.70, 2048, 1, 1, 'active', '用于无真实 API Key 时的本地演示兜底。'),
+  (2, 2, '教师演示模型', 'mock', 'mock://local/teacher-llm', NULL, 'DEMO-ONLY', 'mock-teacher-v1', 'mock-embedding-v1', 0.60, 2048, 1, 1, 'active', '教师备课场景演示配置。');
+
+INSERT INTO ai_companion_role (
+  id, user_id, role_name, role_identity, avatar_url, theme_color, background, personality,
+  expertise, hobbies, speaking_style, scenario, companion_goal, boundaries, custom_prompt,
+  tags, is_default, status
+)
+VALUES
+  (1, 3, '温柔学姐小知', '高年级学姐', NULL, '#409EFF',
+   '正在陪你准备考试的高年级学姐，擅长把复杂内容拆成容易理解的小步骤。',
+   '温柔、耐心、积极反馈，会先降低焦虑再推进学习。',
+   '英语六级、数据库复习、学习规划、错题复盘',
+   '做笔记、分享方法、轻音乐、晚自习',
+   '鼓励式、伙伴式、循循善诱，先说下一步再解释原因。',
+   '晚自习、自习室、考前冲刺',
+   '帮我坚持学习、缓解焦虑、督促打卡。',
+   '不直接代写作业答案，先引导理解；遇到不会的问题优先拆步骤。',
+   '回答前先把任务拆成两步，用轻松但不敷衍的语气陪伴学习。',
+   '陪伴型,鼓励式,英语六级,晚自习', 1, 'active'),
+  (2, 3, '严格督学导师', '学习督导老师', NULL, '#67C23A',
+   '负责帮助学生稳定推进复习计划的督学导师。',
+   '直接、严谨、重视计划执行和复盘。',
+   '复习计划、阶段测验、薄弱点诊断',
+   '时间管理、清单复盘、阶段目标',
+   '现实、直白、少兜圈，先指出问题再给行动清单。',
+   '考前冲刺、阶段复盘、学习计划调整',
+   '让学习目标更清楚，减少拖延，形成稳定学习节奏。',
+   '不制造焦虑，不给无法执行的空泛建议。',
+   '回答要短、硬核、能执行，每次给出下一步动作。',
+   '督学型,计划型,复盘,冲刺', 0, 'active');
 
 -- The seed file intentionally does not pre-create conversations, knowledge files,
 -- Agent tasks, generated resources, learning paths, quizzes, mastery records,
 -- reports, or operation logs. These records should be produced during the live
--- demonstration so users can clearly distinguish real AI-generated results from
--- initial account and configuration data.
+-- demonstration so users can clearly distinguish generated results from initial
+-- account and configuration data.

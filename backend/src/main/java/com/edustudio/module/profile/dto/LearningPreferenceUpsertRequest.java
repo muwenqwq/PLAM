@@ -18,7 +18,7 @@ public class LearningPreferenceUpsertRequest {
     @Pattern(regexp = "easy|medium|hard|adaptive", message = "难度偏好只能是 easy、medium、hard 或 adaptive")
     private String difficultyPreference;
 
-    @Pattern(regexp = "zh-CN|en-US", message = "输出语言只能是 zh-CN 或 en-US")
+    @Pattern(regexp = "zh-CN", message = "系统仅支持中文输出")
     private String languagePreference;
 
     private JsonNode studyTimeSlots;

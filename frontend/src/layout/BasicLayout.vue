@@ -1,10 +1,23 @@
 <template>
   <div class="shell">
     <transition name="fade">
-      <button v-if="app.mobileMenuOpen" class="mobile-overlay" type="button" aria-label="关闭导航" @click="app.closeMobileMenu()" />
+      <button
+        v-if="app.mobileMenuOpen"
+        class="mobile-overlay"
+        type="button"
+        aria-label="关闭导航"
+        @click="app.closeMobileMenu()"
+      />
     </transition>
 
-    <aside id="student-sidebar" ref="sidebarRef" class="sidebar" :class="{ collapsed: app.collapsed, 'mobile-open': app.mobileMenuOpen }" :inert="isMobile && !app.mobileMenuOpen" :aria-hidden="isMobile && !app.mobileMenuOpen">
+    <aside
+      id="student-sidebar"
+      ref="sidebarRef"
+      class="sidebar"
+      :class="{ collapsed: app.collapsed, 'mobile-open': app.mobileMenuOpen }"
+      :inert="isMobile && !app.mobileMenuOpen"
+      :aria-hidden="isMobile && !app.mobileMenuOpen"
+    >
       <div class="brand">
         <div class="brand-mark">智</div>
         <div class="brand-copy">
@@ -40,7 +53,16 @@
     <div class="workspace" :class="{ 'sidebar-collapsed': app.collapsed }">
       <header class="topbar">
         <div class="top-left">
-          <el-button ref="menuButtonRef" class="mobile-menu-button" circle :aria-label="app.mobileMenuOpen ? '关闭导航' : '打开导航'" aria-controls="student-sidebar" :aria-expanded="app.mobileMenuOpen" :icon="Menu" @click="app.toggleMobileMenu()" />
+          <el-button
+            ref="menuButtonRef"
+            class="mobile-menu-button"
+            circle
+            :aria-label="app.mobileMenuOpen ? '关闭导航' : '打开导航'"
+            aria-controls="student-sidebar"
+            :aria-expanded="app.mobileMenuOpen"
+            :icon="Menu"
+            @click="app.toggleMobileMenu()"
+          />
           <div>
             <h1>{{ $route.meta.title || '工作台' }}</h1>
             <p>{{ $route.meta.description || '围绕资料、资源和测验安排今天的学习。' }}</p>
@@ -84,6 +106,7 @@ const sidebarRef = ref<HTMLElement>()
 const menuButtonRef = ref<any>()
 const isMobile = ref(false)
 let mobileQuery: MediaQueryList | undefined
+
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || 'Demo Student')
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
 
@@ -93,10 +116,15 @@ const menuItems = [
   { path: '/knowledge', title: '我的知识库', icon: 'Collection' },
   { path: '/resource-generation', title: '资源生成', icon: 'DocumentAdd' },
   { path: '/resources', title: '我的资源', icon: 'Files' },
+  { path: '/paths', title: '学习路径', icon: 'Guide' },
+  { path: '/graph', title: '知识图谱', icon: 'Share' },
+  { path: '/agents', title: '多 Agent', icon: 'Operation' },
   { path: '/quiz', title: '学习测验', icon: 'EditPen' },
   { path: '/reports', title: '学习报告', icon: 'PieChart' },
+  { path: '/chat', title: 'AI 对话', icon: 'ChatDotRound' },
+  { path: '/roles', title: 'AI 角色', icon: 'Avatar' },
   { path: '/models', title: 'AI 模型', icon: 'Connection' },
-  { path: '/profile', title: '个人中心', icon: 'User' }
+  { path: '/profile', title: '学习画像', icon: 'User' }
 ]
 
 async function handleLogout() {
@@ -205,7 +233,6 @@ onBeforeUnmount(() => {
 .mobile-overlay { position: fixed; inset: 0; z-index: 35; display: none; padding: 0; background: rgba(8, 7, 14, .5); border: 0; backdrop-filter: blur(3px); }
 .fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
-
 @media (max-width: 900px) {
   .sidebar, .sidebar.collapsed { width: min(82vw, 276px); transform: translateX(-104%); }
   .sidebar.mobile-open { transform: translateX(0); }

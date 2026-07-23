@@ -28,3 +28,17 @@ def test_learning_path_adjust():
     )
     assert response.status_code == 200
     assert response.json()["adjusted_items"][0]["title"].startswith("调整")
+
+
+def test_learning_path_adjust_accepts_database_json_string_points():
+    response = client.post(
+        "/ai/learning-paths/adjust",
+        json={
+            "model_config": _model(),
+            "path_title": "软件工程路径",
+            "current_progress": 30,
+            "items": [{"title": "需求分析", "knowledge_points": "[\"用例\", \"需求规格\"]"}],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["adjusted_items"][0]["knowledge_points"] == ["用例", "需求规格"]

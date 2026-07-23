@@ -20,6 +20,10 @@ public class Conversation extends BaseEntity {
 
     private String summary;
 
+    private Long roleId;
+
+    private Boolean rolePlayEnabled;
+
     private Integer messageCount;
 
     private String status;

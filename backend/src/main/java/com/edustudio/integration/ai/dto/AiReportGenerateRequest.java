@@ -27,4 +27,15 @@ public class AiReportGenerateRequest {
 
     @JsonProperty("mastery_records")
     private List<Map<String, Object>> masteryRecords;
+
+    @JsonProperty("learning_evidence")
+    private Map<String, Object> learningEvidence;
+
+    private Map<String, Object> profile;
+
+    @JsonProperty("role_play_enabled")
+    private Boolean rolePlayEnabled;
+
+    @JsonProperty("companion_role")
+    private Map<String, Object> companionRole;
 }

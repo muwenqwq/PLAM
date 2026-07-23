@@ -8,13 +8,15 @@ import java.util.List;
 
 public interface ReportService {
 
-    ReportOverviewVO overview();
+    ReportOverviewVO overview(Long spaceId);
 
     List<LearningReportVO> listBySpace(Long spaceId);
 
     LearningReportVO generate(ReportGenerateRequest request);
 
     LearningReportVO detail(Long id);
+
+    void delete(Long id);
 
     String exportMarkdown(Long id);
 }

@@ -2,8 +2,10 @@ package com.edustudio.module.knowledge;
 
 import com.edustudio.common.security.UserPrincipal;
 import com.edustudio.module.knowledge.dto.KnowledgeFileCreateRequest;
+import com.edustudio.module.knowledge.dto.KnowledgeSearchRequest;
 import com.edustudio.module.knowledge.service.KnowledgeService;
 import com.edustudio.module.knowledge.vo.KnowledgeFileVO;
+import com.edustudio.module.knowledge.vo.KnowledgeSearchResultVO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -83,6 +85,24 @@ class KnowledgeControllerTest {
                         .with(authentication(auth())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.originalName").value("函数极限.md"));
+    }
+
+    @Test
+    void shouldAcceptKnowledgeChatHistoryAndModel() throws Exception {
+        when(knowledgeService.qa(any(KnowledgeSearchRequest.class))).thenReturn(KnowledgeSearchResultVO.builder()
+                .query("什么是函数极限")
+                .answerMarkdown("函数极限描述趋近过程。[来源1]")
+                .build());
+
+        mockMvc.perform(post("/api/knowledge/qa")
+                        .with(authentication(auth()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"spaceId":1,"modelProviderId":2,"query":"什么是函数极限",\
+                                "history":[{"role":"user","content":"我在复习高等数学"}]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.answerMarkdown").value("函数极限描述趋近过程。[来源1]"));
     }
 
     private static UsernamePasswordAuthenticationToken auth() {

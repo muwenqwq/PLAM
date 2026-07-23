@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Data
 public class AiQuizQuestionDTO {
@@ -24,6 +25,9 @@ public class AiQuizQuestionDTO {
 
     @JsonProperty("analysis_text")
     private String analysisText;
+
+    @JsonProperty("option_explanations")
+    private Map<String, String> optionExplanations;
 
     @JsonProperty("knowledge_points")
     private List<String> knowledgePoints;

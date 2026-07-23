@@ -13,8 +13,10 @@ import com.edustudio.integration.ai.dto.AiLearningPathGenerateRequest;
 import com.edustudio.integration.ai.dto.AiLearningPathGenerateResponse;
 import com.edustudio.integration.ai.dto.AiLearningPathItemDTO;
 import com.edustudio.module.learningpath.dto.LearningPathGenerateRequest;
+import com.edustudio.module.learningpath.dto.LearningPathItemEditRequest;
 import com.edustudio.module.learningpath.dto.LearningPathItemStatusRequest;
 import com.edustudio.module.learningpath.dto.LearningPathQueryRequest;
+import com.edustudio.module.learningpath.dto.LearningPathUpdateRequest;
 import com.edustudio.module.learningpath.entity.LearningPath;
 import com.edustudio.module.learningpath.entity.LearningPathItem;
 import com.edustudio.module.learningpath.mapper.LearningPathItemMapper;
@@ -24,6 +26,7 @@ import com.edustudio.module.learningpath.vo.LearningPathItemVO;
 import com.edustudio.module.learningpath.vo.LearningPathVO;
 import com.edustudio.module.learningspace.service.LearningSpaceService;
 import com.edustudio.module.modelprovider.service.ModelProviderService;
+import com.edustudio.module.profile.service.UserProfileService;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,9 +36,15 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +55,7 @@ public class LearningPathServiceImpl implements LearningPathService {
     private final LearningSpaceService learningSpaceService;
     private final ModelProviderService modelProviderService;
     private final AiServiceClient aiServiceClient;
+    private final UserProfileService userProfileService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -53,6 +63,7 @@ public class LearningPathServiceImpl implements LearningPathService {
         Long userId = LoginUserHolder.requireCurrentUserId();
         learningSpaceService.assertOwned(request.getSpaceId());
         Long providerId = modelProviderService.resolveProviderId(request.getModelProviderId());
+        Map<String, Object> learnerProfile = userProfileService.getAiProfile(request.getSpaceId());
         AiLearningPathGenerateResponse response = aiServiceClient.generateLearningPath(AiLearningPathGenerateRequest.builder()
                 .modelConfig(modelProviderService.resolveConfig(providerId))
                 .subject(request.getSubject())
@@ -60,6 +71,7 @@ public class LearningPathServiceImpl implements LearningPathService {
                 .knowledgePoints(request.getKnowledgePoints())
                 .days(request.getDays())
                 .preference(request.getPreference())
+                .profile(learnerProfile)
                 .build());
         LearningPath path = new LearningPath();
         path.setUserId(userId);
@@ -74,6 +86,8 @@ public class LearningPathServiceImpl implements LearningPathService {
         path.setStatus("active");
         learningPathMapper.insert(path);
         persistItems(path, response.getItems());
+        userProfileService.recordActivity(
+                request.getSpaceId(), request.getSubject(), request.getKnowledgePoints(), List.of(), "learning_path");
         return detail(path.getId());
     }
 
@@ -97,6 +111,58 @@ public class LearningPathServiceImpl implements LearningPathService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LearningPathVO update(Long id, LearningPathUpdateRequest request) {
+        LearningPath path = getOwnedPath(id);
+        LocalDate startDate = request.getStartDate() == null ? path.getStartDate() : request.getStartDate();
+        LocalDate targetDate = request.getTargetDate() == null ? path.getTargetDate() : request.getTargetDate();
+        if (startDate != null && targetDate != null && targetDate.isBefore(startDate)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "结束日期不能早于开始日期");
+        }
+
+        path.setTitle(request.getTitle().trim());
+        path.setGoal(request.getGoal().trim());
+        path.setSubject(request.getSubject().trim());
+        path.setStartDate(startDate);
+        path.setTargetDate(targetDate);
+        path.setPlanJson(updatedPlanJson(path.getPlanJson()));
+        learningPathMapper.updateById(path);
+
+        List<LearningPathItem> currentItems = items(path.getId());
+        Map<Long, LearningPathItem> currentById = currentItems.stream()
+                .collect(Collectors.toMap(LearningPathItem::getId, Function.identity()));
+        Set<Long> retainedIds = new HashSet<>();
+        int order = 1;
+        for (LearningPathItemEditRequest itemRequest : request.getItems()) {
+            LearningPathItem item;
+            if (itemRequest.getId() == null) {
+                item = new LearningPathItem();
+                item.setPathId(path.getId());
+                item.setUserId(path.getUserId());
+                item.setSpaceId(path.getSpaceId());
+            } else {
+                item = currentById.get(itemRequest.getId());
+                if (item == null || !retainedIds.add(itemRequest.getId())) {
+                    throw new BusinessException(ResultCode.BAD_REQUEST, "路径任务不存在、重复或不属于当前路径");
+                }
+            }
+            applyItemEdit(path, item, itemRequest, order++);
+            if (item.getId() == null) {
+                learningPathItemMapper.insert(item);
+            } else {
+                learningPathItemMapper.updateById(item);
+            }
+        }
+        for (LearningPathItem item : currentItems) {
+            if (!retainedIds.contains(item.getId())) {
+                learningPathItemMapper.deleteById(item.getId());
+            }
+        }
+        refreshProgress(path.getId());
+        return detail(path.getId());
+    }
+
+    @Override
     public LearningPathItemVO updateItemStatus(Long itemId, LearningPathItemStatusRequest request) {
         LearningPathItem item = getOwnedItem(itemId);
         item.setStatus(request.getStatus());
@@ -107,11 +173,15 @@ public class LearningPathServiceImpl implements LearningPathService {
     }
 
     @Override
-    public List<LearningPathItemVO> today() {
+    public List<LearningPathItemVO> today(Long spaceId) {
         Long userId = LoginUserHolder.requireCurrentUserId();
+        if (spaceId != null) {
+            learningSpaceService.assertOwned(spaceId);
+        }
         return learningPathItemMapper.selectList(new LambdaQueryWrapper<LearningPathItem>()
                         .eq(LearningPathItem::getUserId, userId)
                         .eq(LearningPathItem::getDeleted, 0)
+                        .eq(spaceId != null, LearningPathItem::getSpaceId, spaceId)
                         .le(LearningPathItem::getDueDate, LocalDate.now())
                         .in(LearningPathItem::getStatus, List.of("todo", "doing"))
                         .orderByAsc(LearningPathItem::getDueDate)
@@ -138,7 +208,7 @@ public class LearningPathServiceImpl implements LearningPathService {
             LearningPathItem item = toEntity(path, dto, ++maxOrder);
             learningPathItemMapper.insert(item);
         }
-        path.setPlanJson(JsonUtils.toJson(Map.of("adjust_summary", response.getSummary(), "mock", true)));
+        path.setPlanJson(JsonUtils.toJson(Map.of("adjust_reason", "根据当前完成进度自动调整", "adjust_summary", response.getSummary(), "added_task_count", nullSafe(response.getAdjustedItems()).size())));
         learningPathMapper.updateById(path);
         return detail(id);
     }
@@ -163,6 +233,48 @@ public class LearningPathServiceImpl implements LearningPathService {
         item.setDueDate(path.getStartDate().plusDays(Math.max(0, (dto.getDueDay() == null ? order : dto.getDueDay()) - 1)));
         item.setStatus("todo");
         return item;
+    }
+
+    private void applyItemEdit(LearningPath path, LearningPathItem item,
+                               LearningPathItemEditRequest request, int order) {
+        String status = StringUtils.hasText(request.getStatus())
+                ? request.getStatus()
+                : (StringUtils.hasText(item.getStatus()) ? item.getStatus() : "todo");
+        item.setItemOrder(order);
+        item.setTitle(request.getTitle().trim());
+        item.setDescription(request.getDescription());
+        item.setKnowledgePoints(request.getKnowledgePoints() == null
+                ? (StringUtils.hasText(item.getKnowledgePoints()) ? item.getKnowledgePoints() : "[]")
+                : JsonUtils.toJson(request.getKnowledgePoints()));
+        item.setEstimatedMinutes(request.getEstimatedMinutes() == null ? 30 : request.getEstimatedMinutes());
+        item.setDueDate(request.getDueDate() == null
+                ? path.getStartDate().plusDays(Math.max(0, order - 1L))
+                : request.getDueDate());
+        item.setStatus(status);
+        item.setCompletedAt("done".equals(status)
+                ? (item.getCompletedAt() == null ? LocalDateTime.now() : item.getCompletedAt())
+                : null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private String updatedPlanJson(String currentJson) {
+        Map<String, Object> plan = new LinkedHashMap<>();
+        if (StringUtils.hasText(currentJson)) {
+            try {
+                Map<String, Object> parsed = JsonUtils.fromJson(currentJson, Map.class);
+                if (parsed != null) {
+                    plan.putAll(parsed);
+                }
+            } catch (RuntimeException ignored) {
+                // Keep the editable task list even if an older plan snapshot cannot be parsed.
+            }
+        }
+        plan.put("edited_manually", true);
+        plan.put("edited_at", LocalDateTime.now().toString());
+        plan.remove("adjust_summary");
+        plan.remove("adjustSummary");
+        plan.remove("added_task_count");
+        return JsonUtils.toJson(plan);
     }
 
     private void refreshProgress(Long pathId) {

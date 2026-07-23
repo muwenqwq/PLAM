@@ -78,9 +78,7 @@ public class LearningPreferenceServiceImpl extends ServiceImpl<LearningPreferenc
         if (StringUtils.hasText(request.getDifficultyPreference())) {
             preference.setDifficultyPreference(request.getDifficultyPreference());
         }
-        if (StringUtils.hasText(request.getLanguagePreference())) {
-            preference.setLanguagePreference(request.getLanguagePreference());
-        }
+        preference.setLanguagePreference("zh-CN");
         if (request.getStudyTimeSlots() != null) {
             preference.setStudyTimeSlots(JsonUtils.toJson(request.getStudyTimeSlots()));
         }

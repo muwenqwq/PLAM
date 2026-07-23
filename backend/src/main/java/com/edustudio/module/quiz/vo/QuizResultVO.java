@@ -16,4 +16,5 @@ public class QuizResultVO {
     private BigDecimal accuracyRate;
     private List<String> weakPoints;
     private String analysisMarkdown;
+    private List<QuizQuestionFeedbackVO> questionFeedbacks;
 }

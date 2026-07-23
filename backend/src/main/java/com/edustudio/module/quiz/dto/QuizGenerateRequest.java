@@ -29,5 +29,9 @@ public class QuizGenerateRequest {
 
     private String difficulty = "medium";
 
-    private String questionType = "mixed";
+    private String questionType = "single_choice";
+
+    private Boolean rolePlayEnabled = false;
+
+    private Long companionRoleId;
 }

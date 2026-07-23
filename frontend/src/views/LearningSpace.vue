@@ -23,7 +23,10 @@
     </el-card>
 
     <template v-if="selected">
-      <h2 style="margin: 20px 0 12px">{{ selected.spaceName }} <el-tag>{{ selected.subject }}</el-tag></h2>
+      <div class="toolbar" style="margin: 20px 0 12px">
+        <h2 style="margin: 0">{{ selected.spaceName }} <el-tag>{{ selected.subject }}</el-tag></h2>
+        <el-button @click="router.push({ path: '/profile', query: { spaceId: selected.id } })">编辑学习画像</el-button>
+      </div>
       <el-tabs v-model="activeTab" @tab-change="onTabChange">
         <el-tab-pane label="概览" name="overview">
           <div class="grid three">
@@ -78,6 +81,21 @@
         <el-form-item label="空间名称" required><el-input v-model="form.spaceName" /></el-form-item>
         <el-form-item label="学科"><el-input v-model="form.subject" /></el-form-item>
         <el-form-item label="说明"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
+        <template v-if="!form.id">
+          <el-divider content-position="left">初始学习画像</el-divider>
+          <el-form-item label="学习目标"><el-input v-model="form.learningGoal" type="textarea" :rows="2" placeholder="例如：两周内掌握数据库期末重点" /></el-form-item>
+          <el-form-item label="基础水平">
+            <el-select v-model="form.foundationLevel" class="full-width">
+              <el-option label="刚开始学" value="beginner" />
+              <el-option label="有一定基础" value="intermediate" />
+              <el-option label="希望提高" value="advanced" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="当前薄弱点"><el-input v-model="form.weakPointsText" placeholder="用逗号分隔，可稍后补充" /></el-form-item>
+          <el-form-item label="每周时间"><el-input-number v-model="form.weeklyAvailableHours" :min="0" :max="100" /> 小时</el-form-item>
+          <el-form-item label="可用时段"><el-input v-model="form.availableTimeText" placeholder="例如：工作日晚间, 周末上午" /></el-form-item>
+          <el-form-item label="内容风格"><el-input v-model="form.outputStyle" placeholder="例如：结构化、例题优先" /></el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="dialog = false">取消</el-button>
@@ -89,6 +107,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import StatCard from '@/components/StatCard.vue'
@@ -102,6 +121,7 @@ import { listKnowledgeFiles } from '@/api/knowledge'
 import { listReportsBySpace } from '@/api/report'
 
 const spaces = ref<any[]>([])
+const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
 const dialog = ref(false)
@@ -114,7 +134,7 @@ const spaceQuizzes = ref<any[]>([])
 const spacePaths = ref<any[]>([])
 const spaceKnowledge = ref<any[]>([])
 const spaceReports = ref<any[]>([])
-const form = reactive<any>({ id: null, spaceName: '', subject: '', description: '' })
+const form = reactive<any>({ id: null, spaceName: '', subject: '', description: '', learningGoal: '', foundationLevel: 'intermediate', weakPointsText: '', weeklyAvailableHours: 5, availableTimeText: '', outputStyle: '' })
 
 async function load() {
   loading.value = true
@@ -169,7 +189,7 @@ async function onTabChange(name: string) {
 }
 
 function openCreate() {
-  Object.assign(form, { id: null, spaceName: '', subject: '', description: '' })
+  Object.assign(form, { id: null, spaceName: '', subject: '', description: '', learningGoal: '', foundationLevel: 'intermediate', weakPointsText: '', weeklyAvailableHours: 5, availableTimeText: '', outputStyle: '' })
   dialog.value = true
 }
 
@@ -183,7 +203,11 @@ async function save() {
   saving.value = true
   try {
     if (form.id) await updateSpace(form.id, form)
-    else await createSpace(form)
+    else await createSpace({
+      ...form,
+      weakPoints: splitValues(form.weakPointsText),
+      availableTimeSlots: splitValues(form.availableTimeText)
+    })
     ElMessage.success('保存成功')
     dialog.value = false
     await load()
@@ -193,11 +217,15 @@ async function save() {
 }
 
 async function remove(id: number) {
-  await ElMessageBox.confirm('确认删除该学习空间？', '提示')
+  await ElMessageBox.confirm('删除后，该空间中的资料、生成资源、会话、学习路径、测验、掌握度和报告都会一并删除。确认继续？', '删除学习空间', { type: 'warning', confirmButtonText: '全部删除', cancelButtonText: '取消' })
   await deleteSpace(id)
   ElMessage.success('已删除')
   if (selected.value?.id === id) selected.value = null
   load()
+}
+
+function splitValues(value: string) {
+  return (value || '').split(/[,，、;；]/).map((item: string) => item.trim()).filter(Boolean)
 }
 
 async function setDefault(id: number) {

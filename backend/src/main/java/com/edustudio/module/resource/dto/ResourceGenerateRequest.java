@@ -38,4 +38,8 @@ public class ResourceGenerateRequest {
     private List<Long> sourceFileIds = new ArrayList<>();
 
     private List<String> sourceFileNames = new ArrayList<>();
+
+    private Boolean rolePlayEnabled = false;
+
+    private Long companionRoleId;
 }

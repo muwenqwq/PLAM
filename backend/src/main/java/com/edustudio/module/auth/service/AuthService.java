@@ -13,5 +13,5 @@ public interface AuthService {
 
     CurrentUserVO currentUser();
 
-    void logout();
+    void logout(String token);
 }

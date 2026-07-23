@@ -12,4 +12,8 @@ public class QuizSubmitRequest {
     @Valid
     @NotEmpty(message = "答案不能为空")
     private List<QuizAnswerSubmitDTO> answers;
+
+    private Boolean rolePlayEnabled = false;
+
+    private Long companionRoleId;
 }

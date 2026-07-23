@@ -14,6 +14,7 @@ class LearningPathGenerateRequest(BaseModel):
     knowledge_points: list[str] = Field(default_factory=list)
     days: int = 7
     preference: dict[str, Any] | None = None
+    profile: dict[str, Any] = Field(default_factory=dict)
 
 
 class LearningPathItem(BaseModel):

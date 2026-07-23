@@ -6,7 +6,7 @@
         <template #header>创建任务</template>
         <el-form :model="form" label-width="100px">
           <el-form-item label="学习空间">
-            <el-select v-model="form.spaceId" placeholder="选择学习空间">
+            <el-select v-model="form.spaceId" placeholder="选择学习空间" @change="handleSpaceChange">
               <el-option v-for="s in spaces" :key="s.id" :label="s.spaceName" :value="s.id" />
             </el-select>
           </el-form-item>
@@ -15,17 +15,35 @@
               <el-option v-for="p in providers" :key="p.id" :label="p.providerName" :value="p.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="任务标题"><el-input v-model="form.title" /></el-form-item>
-          <el-form-item label="学科"><el-input v-model="form.subject" /></el-form-item>
+          <el-form-item label="任务标题"><el-input v-model="form.title" placeholder="填写本次要生成的资源标题" /></el-form-item>
+          <el-form-item label="学科"><el-input v-model="form.subject" placeholder="填写课程或学科名称" /></el-form-item>
           <el-form-item label="资源类型">
             <el-select v-model="form.resourceType">
+              <el-option label="课程笔记" value="lecture_note" />
+              <el-option label="知识点总结" value="summary" />
+              <el-option label="思维导图" value="knowledge_graph" />
+              <el-option label="练习题" value="quiz_set" />
+              <el-option label="复习提纲" value="review_outline" />
+              <el-option label="错题整理" value="mistake_review" />
               <el-option label="学习计划" value="plan" />
-              <el-option label="习题集" value="quiz_set" />
-              <el-option label="知识图谱" value="knowledge_graph" />
-              <el-option label="PPT 大纲" value="ppt_outline" />
+              <el-option label="案例任务" value="case_task" />
             </el-select>
           </el-form-item>
-          <el-form-item label="知识点"><el-input v-model="knowledgeText" placeholder="逗号分隔" /></el-form-item>
+          <el-form-item label="知识点"><el-input v-model="knowledgeText" placeholder="填写要覆盖的知识点，用逗号分隔" /></el-form-item>
+          <el-form-item label="生成难度">
+            <el-select v-model="form.difficulty">
+              <el-option label="基础" value="easy" />
+              <el-option label="中等" value="medium" />
+              <el-option label="提高" value="hard" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="内容长度">
+            <el-select v-model="form.outputLength">
+              <el-option label="简短" value="short" />
+              <el-option label="中等" value="medium" />
+              <el-option label="详细" value="long" />
+            </el-select>
+          </el-form-item>
         </el-form>
         <el-button type="primary" :loading="running" @click="run">运行 Agent</el-button>
       </el-card>
@@ -38,9 +56,10 @@
     </div>
     <el-card>
       <template #header>生成资源</template>
-      <div v-if="resources.length" class="grid two">
+      <div v-if="resources.length" class="resource-result">
         <ResourceCard v-for="item in resources" :key="item.id || item.title" :resource="item">
           <MarkdownViewer :content="item.contentMarkdown" />
+          <el-button v-if="item.id" size="small" type="primary" @click="router.push({ path: '/resources', query: { spaceId: form.spaceId, view: String(item.id) } })">去我的资源查看</el-button>
         </ResourceCard>
       </div>
       <EmptyState v-else title="暂无资源" description="运行 Agent 任务或从下方任务列表查看历史资源。" />
@@ -63,6 +82,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -74,15 +94,16 @@ import { getDefaultProvider, listProviders } from '@/api/modelProvider'
 import { getDefaultSpace, listSpaces } from '@/api/learningSpace'
 import { parseKnowledgePoints } from '@/utils/knowledge'
 
+const router = useRouter()
 const running = ref(false)
 const spaces = ref<any[]>([])
 const providers = ref<any[]>([])
 const tasks = ref<any[]>([])
-const knowledgeText = ref('索引, 范式, SQL 查询')
+const knowledgeText = ref('')
 const steps = ref<any[]>([])
 const resources = ref<any[]>([])
 const taskSummary = ref('')
-const form = reactive<any>({ spaceId: null as number | null, providerId: null as number | null, title: '数据库期末复习资源', subject: '数据库', taskType: 'resource_generation', resourceType: 'plan' })
+const form = reactive<any>({ spaceId: null as number | null, providerId: null as number | null, title: '', subject: '', taskType: 'resource_generation', resourceType: 'lecture_note', difficulty: 'medium', outputLength: 'medium' })
 
 async function loadDefaults() {
   const [space, provider] = await Promise.all([
@@ -103,8 +124,16 @@ async function loadSpacesAndProviders() {
 }
 
 async function loadTasks() {
-  const data = await listAgentTasks({ pageNum: 1, pageSize: 50 })
+  if (!form.spaceId) return (tasks.value = [])
+  const data = await listAgentTasks({ spaceId: form.spaceId, pageNum: 1, pageSize: 50 })
   tasks.value = data.records || []
+}
+
+async function handleSpaceChange() {
+  steps.value = []
+  resources.value = []
+  taskSummary.value = ''
+  await loadTasks()
 }
 
 async function openTask(row: any) {
@@ -119,6 +148,10 @@ async function openTask(row: any) {
 
 async function run() {
   const knowledgePoints = parseKnowledgePoints(knowledgeText.value)
+  if (!form.spaceId) {
+    ElMessage.warning('请先选择学习空间')
+    return
+  }
   if (!form.title?.trim() || !form.subject?.trim()) {
     ElMessage.warning('请填写任务标题和学科')
     return
@@ -137,7 +170,10 @@ async function run() {
       inputParams: {
         knowledge_points: knowledgePoints,
         subject: form.subject,
-        resource_type: form.resourceType
+        resource_type: form.resourceType,
+        difficulty: form.difficulty,
+        output_length: form.outputLength,
+        use_knowledge_base: true
       }
     })
     steps.value = data.steps || []
@@ -154,12 +190,17 @@ async function run() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadSpacesAndProviders(), loadDefaults(), loadTasks()])
+  await Promise.all([loadSpacesAndProviders(), loadDefaults()])
+  await loadTasks()
 })
 </script>
 
 <style scoped>
 .task-summary {
   margin-bottom: 12px;
+}
+
+.resource-result {
+  width: 100%;
 }
 </style>

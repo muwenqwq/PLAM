@@ -20,9 +20,11 @@ public class KnowledgeSearchResultVO {
     public static class Item {
         private Long fileId;
         private String source;
+        private String sourceFileName;
         private Integer chunkIndex;
         private String chunkText;
         private BigDecimal score;
+        private String retrievalMode;
         private JsonNode metadata;
     }
 }

@@ -1,5 +1,6 @@
 package com.edustudio.common.security;
 
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthenticationEntryPointImpl authenticationEntryPoint;
     private final AccessDeniedHandlerImpl accessDeniedHandler;
+    private final SimpleRateLimitFilter simpleRateLimitFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -42,12 +44,16 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
+                        // 初次请求已经完成 JWT 校验，流式响应结束时的 ASYNC 二次分派不应重复鉴权。
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+
                         // 必须放行 OPTIONS 预检请求，否则带 Origin 的浏览器请求可能直接 403
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // 登录、注册、健康检查、接口文档放行
                         .requestMatchers(
-                                "/api/auth/**",
+                                "/api/auth/login",
+                                "/api/auth/register",
                                 "/api/health",
                                 "/api/health/db",
                                 "/doc.html",
@@ -60,9 +66,10 @@ public class SecurityConfig {
                                 "/favicon.ico"
                         ).permitAll()
 
-                        // 其他 api 需要登录
-                        .requestMatchers("/api/**").authenticated()
+                        // 学生端接口需要登录并具备学生角色
+                        .requestMatchers("/api/**").hasRole("STUDENT")
                         .anyRequest().permitAll())
+                .addFilterBefore(simpleRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

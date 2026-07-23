@@ -20,6 +20,7 @@ public class QuizQuestion extends BaseEntity {
     private String optionsJson;
     private String answerText;
     private String analysisText;
+    private String optionAnalysisJson;
     private String knowledgePoints;
     private String difficulty;
     private BigDecimal score;

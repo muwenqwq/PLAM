@@ -10,17 +10,22 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
 
 @Tag(name = "认证安全")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
+    private static final String BEARER_PREFIX = "Bearer ";
 
     private final AuthService authService;
 
@@ -44,8 +49,15 @@ public class AuthController {
 
     @Operation(summary = "用户退出")
     @PostMapping("/logout")
-    public Result<Void> logout() {
-        authService.logout();
+    public Result<Void> logout(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+        authService.logout(resolveToken(authorization));
         return Result.success();
+    }
+
+    private String resolveToken(String authorization) {
+        if (StringUtils.hasText(authorization) && authorization.startsWith(BEARER_PREFIX)) {
+            return authorization.substring(BEARER_PREFIX.length());
+        }
+        return null;
     }
 }

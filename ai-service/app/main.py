@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import agents, chat, health, learning_paths, model_test, quizzes, rag, reports, resources
+from app.api import agents, chat, health, learning_paths, model_test, profiles, quizzes, rag, reports, resources
 from app.core.config import settings
 
 app = FastAPI(title=settings.app_name, version=settings.version)
@@ -23,3 +23,4 @@ app.include_router(rag.router, prefix="/ai/rag", tags=["rag"])
 app.include_router(learning_paths.router, prefix="/ai/learning-paths", tags=["learning-paths"])
 app.include_router(quizzes.router, prefix="/ai/quizzes", tags=["quizzes"])
 app.include_router(reports.router, prefix="/ai/reports", tags=["reports"])
+app.include_router(profiles.router, prefix="/ai/profiles", tags=["profiles"])

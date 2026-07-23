@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -28,4 +29,6 @@ public class AiLearningPathGenerateRequest {
     private Integer days;
 
     private JsonNode preference;
+
+    private Map<String, Object> profile;
 }

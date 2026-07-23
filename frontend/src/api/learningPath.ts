@@ -12,12 +12,16 @@ export function getLearningPath(id: number) {
   return request.get<any, any>(`/learning-paths/${id}`)
 }
 
+export function updateLearningPath(id: number, data: any) {
+  return request.put<any, any>(`/learning-paths/${id}`, data)
+}
+
 export function updatePathItemStatus(id: number, status: string) {
   return request.put<any, any>(`/learning-path-items/${id}/status`, { status })
 }
 
-export function todayTasks() {
-  return request.get<any, any[]>('/learning-paths/today')
+export function todayTasks(spaceId?: number | null) {
+  return request.get<any, any[]>('/learning-paths/today', { params: { spaceId } })
 }
 
 export function adjustLearningPath(id: number) {

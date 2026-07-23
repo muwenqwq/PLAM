@@ -21,10 +21,10 @@ spring:
 
 mybatis-plus:
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
 
 logging:
   level:
-    com.edustudio: DEBUG
+    com.edustudio: INFO
     com.baomidou.mybatisplus: INFO
     org.springframework.web: INFO

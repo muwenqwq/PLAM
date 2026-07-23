@@ -3,22 +3,18 @@ target/
 *.jar
 *.war
 *.ear
-
 .idea/
 .vscode/
 *.iml
-
 node_modules/
 dist/
 build/
 .npm-cache/
-
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
 venv/
-
 *.log
 .DS_Store
 Thumbs.db
@@ -31,3 +27,10 @@ frontend/node_modules/
 frontend/dist/
 backend/target/
 ai-service/.pytest_cache/
+ai-service/.rag_vector_store/
+.rag_vector_store/
+
+# Local competition deliverables and generated presentation assets.
+projects/
+submit/
+ppt_assets/

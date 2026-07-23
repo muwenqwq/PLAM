@@ -5,6 +5,7 @@ import com.edustudio.common.api.ResultCode;
 import com.edustudio.common.exception.BusinessException;
 import com.edustudio.common.security.JwtTokenUtil;
 import com.edustudio.common.security.LoginUserHolder;
+import com.edustudio.common.security.TokenBlacklistService;
 import com.edustudio.common.security.UserPrincipal;
 import com.edustudio.module.auth.dto.LoginRequest;
 import com.edustudio.module.auth.dto.RegisterRequest;
@@ -39,6 +40,7 @@ public class AuthServiceImpl implements AuthService {
     private final SysUserRoleMapper sysUserRoleMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtil jwtTokenUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -105,7 +107,10 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void logout() {
+    public void logout(String token) {
+        if (StringUtils.hasText(token) && jwtTokenUtil.validateToken(token)) {
+            tokenBlacklistService.blacklist(token, jwtTokenUtil.getExpiresAt(token));
+        }
         LoginUserHolder.clear();
     }
 

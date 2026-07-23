@@ -3,6 +3,7 @@ package com.edustudio.module.learningpath;
 import com.edustudio.common.security.UserPrincipal;
 import com.edustudio.module.learningpath.dto.LearningPathGenerateRequest;
 import com.edustudio.module.learningpath.dto.LearningPathItemStatusRequest;
+import com.edustudio.module.learningpath.dto.LearningPathUpdateRequest;
 import com.edustudio.module.learningpath.service.LearningPathService;
 import com.edustudio.module.learningpath.vo.LearningPathItemVO;
 import com.edustudio.module.learningpath.vo.LearningPathVO;
@@ -47,6 +48,7 @@ class LearningPathControllerTest {
     void shouldGenerateAndUpdateLearningPath() throws Exception {
         when(learningPathService.generate(any(LearningPathGenerateRequest.class))).thenReturn(LearningPathVO.builder().id(1L).title("Java 路径").build());
         when(learningPathService.updateItemStatus(eq(8L), any(LearningPathItemStatusRequest.class))).thenReturn(LearningPathItemVO.builder().id(8L).status("done").build());
+        when(learningPathService.update(eq(1L), any(LearningPathUpdateRequest.class))).thenReturn(LearningPathVO.builder().id(1L).title("Java 路径（已编辑）").build());
 
         mockMvc.perform(post("/api/learning-paths/generate")
                         .with(authentication(auth()))
@@ -61,6 +63,17 @@ class LearningPathControllerTest {
                         .content("{\"status\":\"done\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("done"));
+
+        mockMvc.perform(put("/api/learning-paths/1")
+                        .with(authentication(auth()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Java 路径（已编辑）","subject":"Java","goal":"掌握后端",\
+                                "items":[{"title":"Spring 入门","description":"完成一个接口",\
+                                "knowledgePoints":["Spring"],"estimatedMinutes":45,"status":"todo"}]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("Java 路径（已编辑）"));
     }
 
     private static UsernamePasswordAuthenticationToken auth() {

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -26,6 +27,10 @@ public class UserProfile extends BaseEntity {
 
     private String learningGoal;
 
+    private String profileNarrative;
+
+    private String adaptiveSummary;
+
     private String subjectDirection;
 
     private String foundationLevel;
@@ -43,6 +48,12 @@ public class UserProfile extends BaseEntity {
     private String outputStyle;
 
     private String profileSource;
+
+    private String lastActivitySource;
+
+    private String lastActivitySummary;
+
+    private LocalDateTime lastActivityAt;
 
     private String status;
 }

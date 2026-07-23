@@ -14,17 +14,21 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -42,6 +46,40 @@ class ChatControllerTest {
         mockMvc.perform(get("/api/chat/conversations"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("401"));
+    }
+
+    @Test
+    void shouldStreamAssistantMessageAsServerSentEvents() throws Exception {
+        ChatResponseVO response = ChatResponseVO.builder()
+                .conversation(ConversationVO.builder().id(1L).title("database review").build())
+                .userMessage(ConversationMessageVO.builder().id(11L).messageRole("user").contentMd("review index").build())
+                .assistantMessage(ConversationMessageVO.builder().id(12L).messageRole("assistant").contentMd("Review B+Tree first, then practice query optimization.").build())
+                .build();
+        when(chatService.streamMessage(eq(1L), any(ChatMessageRequest.class), any())).thenAnswer(invocation -> {
+            Consumer<String> onDelta = invocation.getArgument(2);
+            onDelta.accept("Review B+Tree first, ");
+            onDelta.accept("then practice query optimization.");
+            return response;
+        });
+
+        MvcResult result = mockMvc.perform(post("/api/chat/conversations/1/messages/stream")
+                        .with(authenticatedUser())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "subject": "database review",
+                                  "message": "review index"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"type\":\"delta\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Review B+Tree first")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"type\":\"done\"")));
     }
 
     @Test

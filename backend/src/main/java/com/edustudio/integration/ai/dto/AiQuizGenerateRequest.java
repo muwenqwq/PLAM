@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -31,4 +32,12 @@ public class AiQuizGenerateRequest {
 
     @JsonProperty("question_type")
     private String questionType;
+
+    private Map<String, Object> profile;
+
+    @JsonProperty("role_play_enabled")
+    private Boolean rolePlayEnabled;
+
+    @JsonProperty("companion_role")
+    private Map<String, Object> companionRole;
 }

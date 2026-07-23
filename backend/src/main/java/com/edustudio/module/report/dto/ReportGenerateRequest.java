@@ -16,4 +16,8 @@ public class ReportGenerateRequest {
 
     @NotBlank(message = "报告标题不能为空")
     private String title;
+
+    private Boolean rolePlayEnabled = false;
+
+    private Long companionRoleId;
 }

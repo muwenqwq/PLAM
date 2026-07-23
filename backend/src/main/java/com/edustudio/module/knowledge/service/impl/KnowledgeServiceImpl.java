@@ -11,6 +11,9 @@ import com.edustudio.integration.ai.AiServiceClient;
 import com.edustudio.integration.ai.dto.AiRagChunkDTO;
 import com.edustudio.integration.ai.dto.AiRagIndexRequest;
 import com.edustudio.integration.ai.dto.AiRagIndexResponse;
+import com.edustudio.integration.ai.dto.AiRagQaRequest;
+import com.edustudio.integration.ai.dto.AiRagQaResponse;
+import com.edustudio.integration.ai.dto.AiRagSearchRequest;
 import com.edustudio.module.knowledge.dto.KnowledgeFileCreateRequest;
 import com.edustudio.module.knowledge.dto.KnowledgeFileQueryRequest;
 import com.edustudio.module.knowledge.dto.KnowledgeIndexRequest;
@@ -24,11 +27,14 @@ import com.edustudio.module.knowledge.vo.KnowledgeChunkVO;
 import com.edustudio.module.knowledge.vo.KnowledgeFileVO;
 import com.edustudio.module.knowledge.vo.KnowledgeSearchResultVO;
 import com.edustudio.module.learningspace.service.LearningSpaceService;
+import com.edustudio.module.learningspace.support.KnowledgeStorageCleaner;
 import com.edustudio.module.modelprovider.service.ModelProviderService;
+import com.edustudio.module.profile.service.UserProfileService;
 import com.edustudio.module.resource.entity.GeneratedResource;
 import com.edustudio.module.resource.mapper.GeneratedResourceMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +67,7 @@ import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class KnowledgeServiceImpl implements KnowledgeService {
 
     private static final String ACTIVE_STATUS = "active";
@@ -72,9 +79,14 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     private final ModelProviderService modelProviderService;
     private final KnowledgeFileTextExtractor textExtractor;
     private final GeneratedResourceMapper generatedResourceMapper;
+    private final UserProfileService userProfileService;
+    private final KnowledgeStorageCleaner storageCleaner;
 
     @Value("${eduagent.knowledge.storage-dir:${user.dir}/data/knowledge}")
     private String storageDir;
+
+    @Value("${eduagent.rag.vector-backend:mysql}")
+    private String ragVectorBackend;
 
     @Override
     public KnowledgeFileVO create(KnowledgeFileCreateRequest request) {
@@ -86,7 +98,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         file.setOriginalName(request.getOriginalName());
         file.setStoragePath(StringUtils.hasText(request.getStoragePath())
                 ? request.getStoragePath()
-                : "knowledge/" + userId + "/" + request.getOriginalName());
+                : "knowledge/" + userId + "/" + request.getSpaceId() + "/metadata/" + request.getOriginalName());
         file.setFileType(request.getFileType());
         file.setFileSize(request.getFileSize());
         file.setParserStatus("pending");
@@ -109,7 +121,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         String fileType = detectFileType(originalName);
         String sourceText = textExtractor.extract(originalName, multipartFile.getContentType(), bytes);
         String checksum = sha256(bytes);
-        String storagePath = saveFile(userId, originalName, bytes);
+        String storagePath = saveFile(userId, spaceId, originalName, bytes);
 
         KnowledgeFile file = new KnowledgeFile();
         file.setUserId(userId);
@@ -193,6 +205,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         if (file == null) {
             return;
         }
+        deleteVectorIndex(file.getId());
         knowledgeChunkMapper.delete(new LambdaQueryWrapper<KnowledgeChunk>()
                 .eq(KnowledgeChunk::getKnowledgeFileId, file.getId())
                 .eq(KnowledgeChunk::getUserId, userId));
@@ -232,9 +245,23 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         KnowledgeFile file = getOwnedFile(id);
+        deleteVectorIndex(file.getId());
+        knowledgeChunkMapper.delete(new LambdaQueryWrapper<KnowledgeChunk>()
+                .eq(KnowledgeChunk::getKnowledgeFileId, file.getId())
+                .eq(KnowledgeChunk::getUserId, file.getUserId()));
         knowledgeFileMapper.deleteById(file);
+        storageCleaner.deleteStoredFile(file);
+    }
+
+    private void deleteVectorIndex(Long fileId) {
+        try {
+            aiServiceClient.deleteKnowledgeIndex(fileId);
+        } catch (BusinessException exception) {
+            log.warn("Failed to delete vector index for knowledge file {}: {}", fileId, exception.getMessage());
+        }
     }
 
     @Override
@@ -247,6 +274,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
     private KnowledgeFileVO indexFile(KnowledgeFile file, String sourceText, Map<String, Object> extraMetadata) {
         Map<String, Object> metadata = new HashMap<>();
+        metadata.put("user_id", file.getUserId());
         metadata.put("space_id", file.getSpaceId());
         metadata.put("storage_path", file.getStoragePath());
         metadata.put("checksum", valueOrBlank(file.getChecksum()));
@@ -337,12 +365,15 @@ public class KnowledgeServiceImpl implements KnowledgeService {
                             ? "generated_resource" : "knowledge_file");
                     metadata.put("file_id", chunk.getKnowledgeFileId());
                     metadata.put("space_id", chunk.getSpaceId());
+                    metadata.put("retrieval_mode", retrievalMode());
                     return KnowledgeSearchResultVO.Item.builder()
                             .fileId(chunk.getKnowledgeFileId())
                             .source(file == null ? "学习资料" : file.getOriginalName())
+                            .sourceFileName(file == null ? "学习资料" : file.getOriginalName())
                             .chunkIndex(chunk.getChunkIndex())
                             .chunkText(chunk.getContentText())
                             .score(BigDecimal.ONE)
+                            .retrievalMode(retrievalMode())
                             .metadata(JsonUtils.fromJson(JsonUtils.toJson(metadata), JsonNode.class))
                             .build();
                 })
@@ -353,9 +384,32 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     public KnowledgeSearchResultVO qa(KnowledgeSearchRequest request) {
         assertFilesOwned(request);
         List<KnowledgeSearchResultVO.Item> results = findActualResults(request);
+        String answer = buildGroundedAnswer(request.getQuery(), results);
+        if (!results.isEmpty()) {
+            try {
+                Long providerId = modelProviderService.resolveProviderId(request.getModelProviderId());
+                AiRagQaResponse response = aiServiceClient.answerKnowledge(AiRagQaRequest.builder()
+                        .modelConfig(modelProviderService.resolveConfig(providerId))
+                        .query(request.getQuery())
+                        .fileIds(request.getFileIds())
+                        .topK(request.getTopK())
+                        .context(results.stream().map(this::toAiRagChunk).toList())
+                        .profile(userProfileService.getAiProfile(request.getSpaceId()))
+                        .history(request.getHistory() == null ? List.of() : request.getHistory().stream()
+                                .map(item -> Map.of("role", item.getRole(), "content", item.getContent()))
+                                .toList())
+                        .build());
+                if (response != null && StringUtils.hasText(response.getAnswerMarkdown())) {
+                    answer = response.getAnswerMarkdown();
+                }
+            } catch (BusinessException ignored) {
+                // Keep the grounded local answer when the AI service is temporarily unavailable.
+            }
+        }
+        userProfileService.recordActivity(request.getSpaceId(), null, List.of(), List.of(), "knowledge_qa");
         return KnowledgeSearchResultVO.builder()
                 .query(request.getQuery())
-                .answerMarkdown(buildGroundedAnswer(request.getQuery(), results))
+                .answerMarkdown(answer)
                 .results(results)
                 .build();
     }
@@ -385,6 +439,10 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         Long userId = LoginUserHolder.requireCurrentUserId();
         int topK = request.getTopK() == null ? 5 : Math.max(1, Math.min(20, request.getTopK()));
         List<Long> fileIds = request.getFileIds() == null ? Collections.emptyList() : request.getFileIds();
+        List<KnowledgeSearchResultVO.Item> vectorResults = findVectorResults(request, userId, topK);
+        if (!vectorResults.isEmpty()) {
+            return vectorResults;
+        }
         List<KnowledgeFile> files = loadSearchFiles(userId, request.getSpaceId(), fileIds);
         Map<Long, KnowledgeFile> fileMap = new HashMap<>();
         Set<Long> spaceIds = new HashSet<>();
@@ -413,6 +471,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
                 metadata.put("source_type", "knowledge_file");
                 metadata.put("file_id", chunk.getKnowledgeFileId());
                 metadata.put("space_id", chunk.getSpaceId());
+                metadata.put("retrieval_mode", retrievalMode());
                 candidates.add(new SearchCandidate(source, chunk.getChunkIndex(), chunk.getContentText(), metadata));
             }
         }
@@ -431,6 +490,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             metadata.put("resource_id", resource.getId());
             metadata.put("resource_type", resource.getResourceType());
             metadata.put("space_id", resource.getSpaceId());
+            metadata.put("retrieval_mode", retrievalMode());
             candidates.add(new SearchCandidate("生成资源：" + valueOrBlank(resource.getTitle()), 0, text, metadata));
         }
 
@@ -442,6 +502,69 @@ public class KnowledgeServiceImpl implements KnowledgeService {
                 .limit(topK)
                 .map(SearchCandidate::toItem)
                 .toList();
+    }
+
+    private List<KnowledgeSearchResultVO.Item> findVectorResults(KnowledgeSearchRequest request, Long userId, int topK) {
+        if (!"chroma".equalsIgnoreCase(ragVectorBackend)) {
+            return Collections.emptyList();
+        }
+        try {
+            Map<String, Object> filters = new LinkedHashMap<>();
+            filters.put("user_id", userId);
+            if (request.getSpaceId() != null) {
+                filters.put("space_id", request.getSpaceId());
+            }
+            var response = aiServiceClient.searchKnowledge(AiRagSearchRequest.builder()
+                    .query(request.getQuery())
+                    .fileIds(request.getFileIds() == null ? Collections.emptyList() : request.getFileIds())
+                    .topK(topK)
+                    .filters(filters)
+                    .build());
+            if (response == null || !Boolean.TRUE.equals(response.getSuccess())) {
+                return Collections.emptyList();
+            }
+            return nullSafe(response.getResults()).stream()
+                    .filter(chunk -> StringUtils.hasText(chunk.getContentText()) && !looksLikeRawOfficeZip(chunk.getContentText()))
+                    .map(this::toVectorItem)
+                    .toList();
+        } catch (RuntimeException exception) {
+            return Collections.emptyList();
+        }
+    }
+
+    private KnowledgeSearchResultVO.Item toVectorItem(AiRagChunkDTO chunk) {
+        Map<String, Object> metadata = chunk.getMetadata() == null ? new LinkedHashMap<>() : new LinkedHashMap<>(chunk.getMetadata());
+        metadata.put("retrieval_mode", StringUtils.hasText(chunk.getRetrievalMode()) ? chunk.getRetrievalMode() : "vector");
+        Long fileId = longValue(metadata.get("file_id"));
+        String source = StringUtils.hasText(chunk.getSource()) ? chunk.getSource() : String.valueOf(metadata.getOrDefault("file_name", "知识片段"));
+        String sourceFileName = StringUtils.hasText(chunk.getSourceFileName()) ? chunk.getSourceFileName() : source;
+        return KnowledgeSearchResultVO.Item.builder()
+                .fileId(fileId)
+                .source(source)
+                .sourceFileName(sourceFileName)
+                .chunkIndex(chunk.getChunkIndex())
+                .chunkText(chunk.getContentText())
+                .score(chunk.getScore() == null ? BigDecimal.ZERO : chunk.getScore().setScale(2, RoundingMode.HALF_UP))
+                .retrievalMode(String.valueOf(metadata.get("retrieval_mode")))
+                .metadata(JsonUtils.fromJson(JsonUtils.toJson(metadata), JsonNode.class))
+                .build();
+    }
+
+    private Long longValue(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String text && StringUtils.hasText(text)) {
+            try {
+                return Long.parseLong(text);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+    private String retrievalMode() {
+        return "chroma".equalsIgnoreCase(ragVectorBackend) ? "mysql_fallback" : "mysql";
     }
 
     private List<KnowledgeFile> loadSearchFiles(Long userId, Long spaceId, List<Long> fileIds) {
@@ -570,6 +693,25 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         return builder.toString();
     }
 
+    private AiRagChunkDTO toAiRagChunk(KnowledgeSearchResultVO.Item item) {
+        AiRagChunkDTO chunk = new AiRagChunkDTO();
+        String content = item.getChunkText() == null ? "" : item.getChunkText();
+        String sourceKey = item.getFileId() == null ? "generated" : item.getFileId().toString();
+        chunk.setChunkIndex(item.getChunkIndex());
+        chunk.setContentText(content);
+        chunk.setContentHash(sha256(content.getBytes(StandardCharsets.UTF_8)));
+        chunk.setTokenCount(Math.max(1, (content.length() + 1) / 2));
+        chunk.setEmbeddingRef("context://" + sourceKey + "/" + Objects.toString(item.getChunkIndex(), "0"));
+        chunk.setScore(item.getScore());
+        chunk.setSource(item.getSource());
+        chunk.setSourceFileName(item.getSourceFileName());
+        chunk.setRetrievalMode(item.getRetrievalMode());
+        chunk.setMetadata(item.getMetadata() == null
+                ? Map.of()
+                : JsonUtils.fromJson(JsonUtils.toJson(item.getMetadata()), new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}));
+        return chunk;
+    }
+
     private String compactSnippet(String text, int maxLength) {
         String compact = text == null ? "" : text.replaceAll("\\s+", " ").trim();
         if (compact.length() <= maxLength) {
@@ -621,10 +763,10 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         }
     }
 
-    private String saveFile(Long userId, String originalName, byte[] bytes) {
+    private String saveFile(Long userId, Long spaceId, String originalName, byte[] bytes) {
         String day = LocalDate.now().toString().replace("-", "");
         String safeName = originalName.replaceAll("[\\\\/:*?\"<>|]+", "_");
-        String relativePath = "knowledge/" + userId + "/" + day + "/" + UUID.randomUUID() + "_" + safeName;
+        String relativePath = "knowledge/" + userId + "/" + spaceId + "/" + day + "/" + UUID.randomUUID() + "_" + safeName;
         Path root = Paths.get(storageDir).toAbsolutePath().normalize();
         Path target = root.resolve(relativePath).normalize();
         if (!target.startsWith(root)) {
@@ -736,9 +878,11 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             return KnowledgeSearchResultVO.Item.builder()
                     .fileId(metadata.get("file_id") instanceof Long id ? id : null)
                     .source(source)
+                    .sourceFileName(source)
                     .chunkIndex(chunkIndex)
                     .chunkText(text)
                     .score(BigDecimal.valueOf(score).setScale(2, RoundingMode.HALF_UP))
+                    .retrievalMode(metadata.get("retrieval_mode") == null ? "mysql" : String.valueOf(metadata.get("retrieval_mode")))
                     .metadata(JsonUtils.fromJson(JsonUtils.toJson(metadata), JsonNode.class))
                     .build();
         }

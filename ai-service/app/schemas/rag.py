@@ -2,6 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.chat import ChatHistoryMessage
 from app.schemas.model import AiModelConfig
 
 
@@ -19,12 +20,14 @@ class RagIndexRequest(BaseModel):
 class RagChunk(BaseModel):
     chunk_index: int
     content_text: str
-    content_hash: str
-    token_count: int
+    content_hash: str = ""
+    token_count: int = 0
     metadata: dict[str, Any] = Field(default_factory=dict)
-    embedding_ref: str
+    embedding_ref: str = ""
     score: float | None = None
     source: str | None = None
+    source_file_name: str | None = None
+    retrieval_mode: str | None = "mysql"
 
 
 class RagIndexResponse(BaseModel):
@@ -48,10 +51,15 @@ class RagSearchResponse(BaseModel):
 
 
 class RagQaRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    model: AiModelConfig | None = Field(default=None, alias="model_config")
     query: str
     file_ids: list[int] = Field(default_factory=list)
     top_k: int = 5
     context: list[RagChunk] | None = None
+    profile: dict[str, Any] = Field(default_factory=dict)
+    history: list[ChatHistoryMessage] = Field(default_factory=list)
 
 
 class RagQaResponse(BaseModel):

@@ -31,4 +31,12 @@ public class AiQuizAnalyzeRequest {
     private List<String> weakPoints;
 
     private List<Map<String, Object>> answers;
+
+    private Map<String, Object> profile;
+
+    @JsonProperty("role_play_enabled")
+    private Boolean rolePlayEnabled;
+
+    @JsonProperty("companion_role")
+    private Map<String, Object> companionRole;
 }

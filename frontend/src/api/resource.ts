@@ -20,6 +20,17 @@ export function exportMarkdown(id: number) {
   return request.post<any, string>(`/resources/${id}/export/markdown`)
 }
 
+export function downloadResourceFile(id: number, format: 'docx' | 'pdf' | 'png' | 'md' = 'docx') {
+  return request.get<any, Blob>(`/resources/${id}/download`, {
+    params: { format },
+    responseType: 'blob'
+  })
+}
+
+export function downloadResourceMarkdown(id: number) {
+  return downloadResourceFile(id, 'md')
+}
+
 export function getResource(id: number) {
   return request.get<any, any>(`/resources/${id}`)
 }

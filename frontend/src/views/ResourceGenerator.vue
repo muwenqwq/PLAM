@@ -56,6 +56,12 @@
               <span>{{ item.text }}</span>
             </button>
           </div>
+          <div class="type-contract">
+            <strong>{{ selectedTypeConfig.label }}将生成</strong>
+            <div>
+              <el-tag v-for="section in selectedTypeConfig.sections" :key="section" size="small" effect="plain">{{ section }}</el-tag>
+            </div>
+          </div>
 
           <div class="form-row">
             <el-form-item label="资源标题">
@@ -117,6 +123,15 @@
                   <el-option v-for="p in providers" :key="p.id" :label="p.providerName" :value="p.id" />
                 </el-select>
               </el-form-item>
+              <el-form-item label="AI 角色">
+                <div class="role-setting">
+                  <el-checkbox v-model="form.rolePlayEnabled">使用默认 AI 角色风格生成内容</el-checkbox>
+                  <el-select v-model="form.companionRoleId" placeholder="选择陪伴角色" clearable :disabled="!form.rolePlayEnabled">
+                    <el-option v-for="role in roles" :key="role.id" :label="role.roleName" :value="role.id" />
+                  </el-select>
+                  <el-alert v-if="form.rolePlayEnabled" :title="roleStyleText" type="info" :closable="false" show-icon />
+                </div>
+              </el-form-item>
             </el-collapse-item>
           </el-collapse>
         </el-form>
@@ -134,6 +149,7 @@
           <div><span>资料来源</span><strong>{{ selectedFileNames || '当前学习空间 / 关键词' }}</strong></div>
           <div><span>生成方式</span><strong>{{ generationMode === 'multi_agent' ? '多 Agent 协作生成' : '普通生成' }}</strong></div>
           <div><span>难度与长度</span><strong>{{ difficultyName(form.difficulty) }} / {{ lengthName(form.outputLength) }}</strong></div>
+          <div><span>AI 角色</span><strong>{{ form.rolePlayEnabled ? roleStyleText : '未启用' }}</strong></div>
         </div>
 
         <el-alert
@@ -200,6 +216,7 @@ import { createAgentTask } from '@/api/agent'
 import { getDefaultProvider, listProviders } from '@/api/modelProvider'
 import { getDefaultSpace, listSpaces } from '@/api/learningSpace'
 import { listKnowledgeFiles } from '@/api/knowledge'
+import { getActiveCompanionRole, listCompanionRoles } from '@/api/companionRole'
 import { parseKnowledgePoints } from '@/utils/knowledge'
 
 const router = useRouter()
@@ -208,20 +225,23 @@ const current = ref<any>()
 const spaces = ref<any[]>([])
 const providers = ref<any[]>([])
 const knowledgeFiles = ref<any[]>([])
+const roles = ref<any[]>([])
 const selectedFileIds = ref<number[]>([])
-const knowledgeText = ref('索引, 范式, SQL 查询')
+const knowledgeText = ref('')
 const generationMode = ref<'normal' | 'multi_agent'>('normal')
 const selectedAgents = ref(['planner', 'knowledge', 'content', 'review'])
 const agentDepth = ref('standard')
 const form = reactive<any>({
   spaceId: null as number | null,
   modelProviderId: null as number | null,
-  title: '数据库索引复习笔记',
-  subject: '数据库',
+  title: '',
+  subject: '',
   resourceType: 'lecture_note',
   difficulty: 'medium',
   outputLength: 'medium',
-  useKnowledgeBase: true
+  useKnowledgeBase: true,
+  rolePlayEnabled: false,
+  companionRoleId: null as number | null
 })
 
 const generationModes = [
@@ -238,15 +258,17 @@ const agentOptions = [
 ]
 
 const resourceTypes = [
-  { label: '课程笔记', value: 'lecture_note', icon: 'Notebook', text: '整理成可直接复习的笔记' },
-  { label: '知识点总结', value: 'summary', icon: 'Collection', text: '提炼关键概念和易错点' },
-  { label: '思维导图', value: 'knowledge_graph', icon: 'Share', text: '用结构图串联知识点' },
-  { label: '练习题', value: 'quiz_set', icon: 'EditPen', text: '生成题目和参考答案' },
-  { label: '复习提纲', value: 'review_outline', icon: 'Tickets', text: '按章节生成复习框架' },
-  { label: '错题整理', value: 'mistake_review', icon: 'Warning', text: '归纳薄弱点和订正建议' },
-  { label: '学习计划', value: 'plan', icon: 'Calendar', text: '安排分阶段学习任务' },
-  { label: '其他资源', value: 'case_task', icon: 'MagicStick', text: '生成案例、任务或扩展材料' }
+  { label: '课程笔记', value: 'lecture_note', icon: 'Notebook', text: '概念讲解、例子、自测完整成篇', sections: ['学习目标', '核心讲解', '例题场景', '即时自测'] },
+  { label: '知识点总结', value: 'summary', icon: 'Collection', text: '高密度结论、对比和易错点', sections: ['一分钟速览', '核心结论', '概念关系', '自检清单'] },
+  { label: '思维导图', value: 'knowledge_graph', icon: 'Share', text: '生成可渲染图谱与关系解读', sections: ['Mermaid 图谱', '关系解读', '学习顺序'] },
+  { label: '练习题', value: 'quiz_set', icon: 'EditPen', text: '四选一练习及每个选项解析', sections: ['单项选择题', '参考答案', '逐项解析', '复习建议'] },
+  { label: '复习提纲', value: 'review_outline', icon: 'Tickets', text: '按优先级组织章节与验收要求', sections: ['复习范围', '优先级', '章节提纲', '考前检查'] },
+  { label: '错题整理', value: 'mistake_review', icon: 'Warning', text: '真实错因、订正步骤与复测标准', sections: ['错因诊断', '订正步骤', '变式练习', '复测标准'] },
+  { label: '学习计划', value: 'plan', icon: 'Calendar', text: '每天都有任务、产出和完成标准', sections: ['目标拆解', '每日安排', '学习产出', '调整规则'] },
+  { label: '案例任务', value: 'case_task', icon: 'MagicStick', text: '真实场景、交付物和评价量规', sections: ['案例背景', '任务要求', '交付物', '评价标准'] }
 ]
+
+const selectedTypeConfig = computed(() => resourceTypes.find((item) => item.value === form.resourceType) || resourceTypes[0])
 
 const stepActive = computed(() => {
   if (generationMode.value === 'multi_agent') return 3
@@ -259,6 +281,20 @@ const selectedFileNames = computed(() => knowledgeFiles.value
   .filter((f) => selectedFileIds.value.includes(f.id))
   .map((f) => f.originalName)
   .join('、'))
+
+
+
+const selectedRole = computed(() => roles.value.find((role) => role.id === form.companionRoleId))
+const roleStyleText = computed(() => selectedRole.value ? `${selectedRole.value.roleName} · ${selectedRole.value.speakingStyle || '按角色卡风格生成内容'}` : '使用当前默认学习陪伴角色')
+
+async function loadRoles() {
+  const [listData, activeRole] = await Promise.all([
+    listCompanionRoles({ pageNum: 1, pageSize: 100 }).catch(() => ({ records: [] })),
+    getActiveCompanionRole().catch(() => null)
+  ])
+  roles.value = listData.records || []
+  if (!form.companionRoleId && activeRole?.id) form.companionRoleId = activeRole.id
+}
 
 async function loadDefaults() {
   const [space, provider] = await Promise.all([
@@ -291,9 +327,6 @@ async function loadFiles() {
 
 function selectType(type: string) {
   form.resourceType = type
-  if (!form.title || resourceTypes.some((item) => form.title.includes(item.label))) {
-    form.title = `${form.subject || '课程'}${typeName(type)}`
-  }
 }
 
 function typeName(type: string) {
@@ -317,13 +350,16 @@ function buildInputParams(knowledgePoints: string[]) {
     source_file_ids: selectedFileIds.value,
     source_file_names: selectedFileNames.value ? selectedFileNames.value.split('、') : [],
     generation_depth: agentDepth.value,
-    enabled_agents: selectedAgents.value
+    enabled_agents: selectedAgents.value,
+    role_play_enabled: form.rolePlayEnabled,
+    companion_role_id: form.companionRoleId
   }
 }
 
 async function generate() {
   if (!form.spaceId) return ElMessage.warning('请先选择学习空间')
   if (!form.title?.trim()) return ElMessage.warning('请填写资源标题')
+  if (!form.subject?.trim()) return ElMessage.warning('请填写学科')
   const knowledgePoints = parseKnowledgePoints(knowledgeText.value)
   if (!knowledgePoints.length && !selectedFileIds.value.length) {
     return ElMessage.warning('请填写重点内容或选择资料来源')
@@ -375,7 +411,7 @@ function resetCurrent() {
 }
 
 onMounted(async () => {
-  await loadSpacesAndProviders()
+  await Promise.all([loadSpacesAndProviders(), loadRoles()])
   await loadDefaults()
 })
 </script>
@@ -444,6 +480,21 @@ onMounted(async () => {
   line-height: 1.5;
 }
 
+.type-contract {
+  display: grid;
+  gap: 9px;
+  margin: -4px 0 18px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--primary);
+  background: var(--surface-soft);
+}
+
+.type-contract > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .agent-options {
   margin: 12px 0;
   display: flex;
@@ -506,6 +557,11 @@ onMounted(async () => {
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
+}
+
+.role-setting {
+  display: grid;
+  gap: 10px;
 }
 
 @media (max-width: 1180px) {

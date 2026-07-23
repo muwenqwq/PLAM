@@ -15,6 +15,7 @@ import com.edustudio.integration.ai.dto.AiModelConfigDTO;
 import com.edustudio.module.chat.dto.ChatMessageRequest;
 import com.edustudio.module.chat.dto.ConversationCreateRequest;
 import com.edustudio.module.chat.dto.ConversationQueryRequest;
+import com.edustudio.module.chat.dto.ConversationRoleRequest;
 import com.edustudio.module.chat.entity.Conversation;
 import com.edustudio.module.chat.entity.ConversationMessage;
 import com.edustudio.module.chat.mapper.ConversationMapper;
@@ -23,16 +24,22 @@ import com.edustudio.module.chat.service.ChatService;
 import com.edustudio.module.chat.vo.ChatResponseVO;
 import com.edustudio.module.chat.vo.ConversationMessageVO;
 import com.edustudio.module.chat.vo.ConversationVO;
+import com.edustudio.module.companion.entity.CompanionRole;
+import com.edustudio.module.companion.service.CompanionRoleService;
 import com.edustudio.module.learningspace.service.LearningSpaceService;
 import com.edustudio.module.modelprovider.service.ModelProviderService;
+import com.edustudio.module.profile.service.UserProfileService;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +51,8 @@ public class ChatServiceImpl implements ChatService {
     private final ConversationMessageMapper messageMapper;
     private final LearningSpaceService learningSpaceService;
     private final ModelProviderService modelProviderService;
+    private final CompanionRoleService companionRoleService;
+    private final UserProfileService userProfileService;
     private final AiServiceClient aiServiceClient;
 
     @Override
@@ -53,15 +62,19 @@ public class ChatServiceImpl implements ChatService {
         if (request.getSpaceId() != null) {
             learningSpaceService.assertOwned(request.getSpaceId());
         }
+        CompanionRole role = request.getRoleId() == null ? null : companionRoleService.getOwnedActiveRole(request.getRoleId());
+
         Conversation entity = new Conversation();
         entity.setUserId(userId);
         entity.setSpaceId(request.getSpaceId());
         entity.setTitle(StringUtils.hasText(request.getTitle()) ? request.getTitle() : "新的学习对话");
         entity.setIntentType(request.getIntentType());
+        entity.setRoleId(role == null ? null : role.getId());
+        entity.setRolePlayEnabled(role != null && Boolean.TRUE.equals(request.getRolePlayEnabled()));
         entity.setMessageCount(0);
         entity.setStatus(ACTIVE_STATUS);
         conversationMapper.insert(entity);
-        return toConversationVO(entity);
+        return toConversationVO(entity, role);
     }
 
     @Override
@@ -75,13 +88,14 @@ public class ChatServiceImpl implements ChatService {
                 .like(StringUtils.hasText(request.getKeyword()), Conversation::getTitle, request.getKeyword())
                 .orderByDesc(Conversation::getUpdatedAt);
         Page<Conversation> result = conversationMapper.selectPage(new Page<>(request.getPageNum(), request.getPageSize()), wrapper);
-        List<ConversationVO> records = result.getRecords().stream().map(this::toConversationVO).toList();
+        List<ConversationVO> records = result.getRecords().stream().map(entity -> toConversationVO(entity, null)).toList();
         return PageResult.of(records, result.getTotal(), request.getPageNum(), request.getPageSize());
     }
 
     @Override
     public ConversationVO detail(Long id) {
-        return toConversationVO(getOwnedConversation(id));
+        Conversation conversation = getOwnedConversation(id);
+        return toConversationVO(conversation, resolveActiveRole(conversation));
     }
 
     @Override
@@ -100,32 +114,63 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ChatResponseVO sendMessage(Long conversationId, ChatMessageRequest request) {
+        return sendMessageInternal(conversationId, request, aiServiceClient::chat);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ChatResponseVO streamMessage(
+            Long conversationId,
+            ChatMessageRequest request,
+            Consumer<String> onDelta
+    ) {
+        return sendMessageInternal(
+                conversationId,
+                request,
+                aiRequest -> aiServiceClient.streamChat(aiRequest, onDelta)
+        );
+    }
+
+    private ChatResponseVO sendMessageInternal(
+            Long conversationId,
+            ChatMessageRequest request,
+            Function<AiChatRequest, AiChatResponse> aiCall
+    ) {
         Conversation conversation = getOwnedConversation(conversationId);
+        CompanionRole role = resolveActiveRole(conversation);
         Long userId = LoginUserHolder.requireCurrentUserId();
         AiModelConfigDTO modelConfig = modelProviderService.resolveConfig(request.getModelProviderId());
+        List<Map<String, String>> history = messages(conversationId).stream()
+                .map(message -> Map.of("role", message.getMessageRole(), "content", message.getContentMd()))
+                .toList();
 
         ConversationMessage userMessage = new ConversationMessage();
         userMessage.setConversationId(conversation.getId());
         userMessage.setUserId(userId);
         userMessage.setMessageRole("user");
         userMessage.setContentMd(request.getMessage());
-        userMessage.setContentJson(JsonUtils.toJson(Map.of("subject", valueOrBlank(request.getSubject()))));
+        userMessage.setContentJson(JsonUtils.toJson(Map.of(
+                "subject", valueOrBlank(request.getSubject()),
+                "role_play_enabled", role != null
+        )));
         userMessage.setTokenCount(Math.max(1, request.getMessage().length() / 2));
         userMessage.setStatus(ACTIVE_STATUS);
         messageMapper.insert(userMessage);
 
-        AiChatResponse aiResponse = aiServiceClient.chat(AiChatRequest.builder()
+        Map<String, Object> roleMap = roleToMap(role);
+        Map<String, Object> learnerProfile = userProfileService.getAiProfile(conversation.getSpaceId());
+        AiChatResponse aiResponse = aiCall.apply(AiChatRequest.builder()
                 .modelConfig(modelConfig)
                 .userId(userId)
                 .conversationId(conversation.getId())
                 .spaceId(conversation.getSpaceId())
                 .subject(request.getSubject())
                 .message(request.getMessage())
-                .history(messages(conversationId).stream()
-                        .map(message -> Map.of("role", message.getMessageRole(), "content", message.getContentMd()))
-                        .toList())
-                .profile(Map.of())
+                .history(history)
+                .profile(learnerProfile)
                 .preference(Map.of())
+                .rolePlayEnabled(role != null)
+                .companionRole(roleMap)
                 .build());
 
         ConversationMessage assistantMessage = new ConversationMessage();
@@ -143,12 +188,44 @@ public class ChatServiceImpl implements ChatService {
             conversation.setSummary(shorten(aiResponse.getReplyMarkdown(), 300));
         }
         conversationMapper.updateById(conversation);
+        userProfileService.recordActivity(
+                conversation.getSpaceId(), request.getSubject(), List.of(), List.of(), "chat",
+                JsonUtils.toJson(Map.of(
+                        "user_message", shorten(request.getMessage(), 1200),
+                        "assistant_reply", shorten(aiResponse.getReplyMarkdown(), 1200),
+                        "subject", valueOrBlank(request.getSubject())
+                )));
 
         return ChatResponseVO.builder()
-                .conversation(toConversationVO(conversation))
+                .conversation(toConversationVO(conversation, role))
                 .userMessage(toMessageVO(userMessage))
                 .assistantMessage(toMessageVO(assistantMessage))
                 .build();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ConversationVO applyRole(Long conversationId, ConversationRoleRequest request) {
+        Conversation conversation = getOwnedConversation(conversationId);
+        boolean enabled = request != null && Boolean.TRUE.equals(request.getRolePlayEnabled());
+        Long roleId = request == null ? null : request.getRoleId();
+        CompanionRole role = null;
+        if (enabled) {
+            if (roleId == null) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "开启角色扮演前需要先选择 AI 角色");
+            }
+            role = companionRoleService.getOwnedActiveRole(roleId);
+            conversation.setRoleId(role.getId());
+            conversation.setRolePlayEnabled(true);
+        } else {
+            if (roleId != null) {
+                role = companionRoleService.getOwnedActiveRole(roleId);
+                conversation.setRoleId(role.getId());
+            }
+            conversation.setRolePlayEnabled(false);
+        }
+        conversationMapper.updateById(conversation);
+        return toConversationVO(conversation, role);
     }
 
     @Override
@@ -172,7 +249,14 @@ public class ChatServiceImpl implements ChatService {
         return entity;
     }
 
-    private ConversationVO toConversationVO(Conversation entity) {
+    private CompanionRole resolveActiveRole(Conversation conversation) {
+        if (!Boolean.TRUE.equals(conversation.getRolePlayEnabled()) || conversation.getRoleId() == null) {
+            return null;
+        }
+        return companionRoleService.getOwnedActiveRole(conversation.getRoleId());
+    }
+
+    private ConversationVO toConversationVO(Conversation entity, CompanionRole role) {
         return ConversationVO.builder()
                 .id(entity.getId())
                 .userId(entity.getUserId())
@@ -180,6 +264,11 @@ public class ChatServiceImpl implements ChatService {
                 .title(entity.getTitle())
                 .intentType(entity.getIntentType())
                 .summary(entity.getSummary())
+                .roleId(entity.getRoleId())
+                .rolePlayEnabled(Boolean.TRUE.equals(entity.getRolePlayEnabled()))
+                .roleName(role == null ? null : role.getRoleName())
+                .roleIdentity(role == null ? null : role.getRoleIdentity())
+                .roleThemeColor(role == null ? null : role.getThemeColor())
                 .messageCount(entity.getMessageCount())
                 .status(entity.getStatus())
                 .createdAt(entity.getCreatedAt())
@@ -201,6 +290,27 @@ public class ChatServiceImpl implements ChatService {
                 .status(entity.getStatus())
                 .createdAt(entity.getCreatedAt())
                 .build();
+    }
+
+    private Map<String, Object> roleToMap(CompanionRole role) {
+        if (role == null) {
+            return Map.of();
+        }
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("role_id", role.getId());
+        values.put("role_name", valueOrBlank(role.getRoleName()));
+        values.put("role_identity", valueOrBlank(role.getRoleIdentity()));
+        values.put("background", valueOrBlank(role.getBackground()));
+        values.put("personality", valueOrBlank(role.getPersonality()));
+        values.put("expertise", valueOrBlank(role.getExpertise()));
+        values.put("hobbies", valueOrBlank(role.getHobbies()));
+        values.put("speaking_style", valueOrBlank(role.getSpeakingStyle()));
+        values.put("scenario", valueOrBlank(role.getScenario()));
+        values.put("companion_goal", valueOrBlank(role.getCompanionGoal()));
+        values.put("boundaries", valueOrBlank(role.getBoundaries()));
+        values.put("custom_prompt", valueOrBlank(role.getCustomPrompt()));
+        values.put("tags", valueOrBlank(role.getTags()));
+        return values;
     }
 
     private String shorten(String value, int maxLength) {

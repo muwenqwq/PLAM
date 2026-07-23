@@ -12,7 +12,7 @@
         <template #header>
           <div>
             <h2 class="section-title">上传学习资料</h2>
-            <p class="section-subtitle">支持 txt、md、docx、pptx 等课程资料。</p>
+            <p class="section-subtitle">支持文字版 PDF、txt、md、docx、pptx 等课程资料。</p>
           </div>
         </template>
         <el-form :model="form" label-position="top">
@@ -23,17 +23,20 @@
           </el-form-item>
           <el-form-item label="资料文件">
             <el-upload
+              ref="uploadRef"
               class="upload-control"
               drag
+              multiple
               action="#"
               :auto-upload="false"
-              :limit="1"
-              accept=".txt,.md,.markdown,.csv,.tsv,.json,.xml,.html,.htm,.java,.py,.js,.ts,.vue,.css,.sql,.yaml,.yml,.properties,.log,.docx,.pptx"
+              :limit="20"
+              accept=".pdf,.txt,.md,.markdown,.csv,.tsv,.json,.xml,.html,.htm,.java,.py,.js,.ts,.vue,.css,.sql,.yaml,.yml,.properties,.log,.docx,.pptx"
               :on-change="handleFileChange"
               :on-remove="handleFileRemove"
+              :on-exceed="handleFileExceed"
             >
-              <div class="upload-title">{{ selectedFile?.name || '拖拽或选择资料文件' }}</div>
-              <div class="upload-subtitle">上传后会自动整理成可问答的学习片段</div>
+              <div class="upload-title">{{ selectedFiles.length ? `已选择 ${selectedFiles.length} 个文件` : '拖拽或选择多个资料文件' }}</div>
+              <div class="upload-subtitle">一次最多选择 20 个文件，上传后会逐个整理成可问答的学习片段</div>
             </el-upload>
           </el-form-item>
         </el-form>
@@ -53,36 +56,60 @@
 
       <el-card shadow="never">
         <template #header>
-          <div>
-            <h2 class="section-title">问问资料</h2>
-            <p class="section-subtitle">选择资料后，直接用自己的话提问。</p>
+          <div class="knowledge-chat-head">
+            <div>
+              <h2 class="section-title">知识库 AI 对话</h2>
+              <p class="section-subtitle">AI 只参考当前学习空间的资料回答，并标出实际引用。</p>
+            </div>
+            <div class="inline-actions">
+              <el-select v-model="modelProviderId" placeholder="选择 AI 服务" style="width: 160px">
+                <el-option v-for="provider in providers" :key="provider.id" :label="provider.providerName" :value="provider.id" />
+              </el-select>
+              <el-tooltip content="清空当前对话" placement="top">
+                <el-button circle :icon="Delete" aria-label="清空知识库对话" @click="clearChat" />
+              </el-tooltip>
+            </div>
           </div>
         </template>
-        <el-input
-          v-model="query"
-          type="textarea"
-          :rows="3"
-          placeholder="例如：这份资料里数据库索引应该怎么复习？"
-        />
-        <div class="actions">
-          <el-button :loading="searching" @click="search">查找相关内容</el-button>
-          <el-button type="primary" :loading="searching" @click="qa">根据资料回答</el-button>
-        </div>
-        <div class="result-box">
-          <LoadingState v-if="searching" text="正在阅读你的资料" />
-          <template v-else>
-            <MarkdownViewer v-if="answer" :content="answer" />
-            <div v-for="item in results" :key="`${item.source}-${item.chunkIndex}`" class="hit">
-              <strong>{{ item.source }}</strong>
-              <p>{{ item.chunkText }}</p>
-              <el-tag size="small" type="info">相关度 {{ item.score }}</el-tag>
+        <div ref="chatScrollRef" class="knowledge-chat-body">
+          <EmptyState
+            v-if="!messages.length && !searching"
+            title="从当前资料开始提问"
+            description="可以追问概念、比较观点、整理复习重点，回答会附上引用来源。"
+          />
+          <article v-for="message in messages" :key="message.id" class="knowledge-message" :class="message.role">
+            <div class="message-role">{{ message.role === 'user' ? '我' : '知识库 AI' }}</div>
+            <div class="message-bubble">
+              <p v-if="message.role === 'user'" class="user-message">{{ message.content }}</p>
+              <MarkdownViewer v-else :content="message.content" />
+              <el-collapse v-if="message.role === 'assistant' && message.citations?.length" class="evidence-collapse">
+                <el-collapse-item :title="`引用资料（${message.citations.length} 个片段）`" :name="`evidence-${message.id}`">
+                  <div v-for="item in message.citations" :key="`${message.id}-${sourceName(item)}-${item.chunkIndex}`" class="hit">
+                    <div class="hit-head">
+                      <div>
+                        <strong>{{ sourceName(item) }}</strong>
+                        <p class="hit-meta">片段 {{ item.chunkIndex ?? '-' }} · {{ retrievalModeLabel(item.retrievalMode) }}</p>
+                      </div>
+                      <el-tag size="small" type="success">{{ scorePercent(item.score) }}</el-tag>
+                    </div>
+                    <p class="hit-snippet">{{ item.chunkText }}</p>
+                  </div>
+                </el-collapse-item>
+              </el-collapse>
             </div>
-            <EmptyState
-              v-if="!answer && !results.length"
-              title="还没有问答结果"
-              description="上传资料后，输入问题即可根据资料查找答案。"
-            />
-          </template>
+          </article>
+          <LoadingState v-if="searching" text="正在阅读资料并组织回答" />
+        </div>
+        <div class="knowledge-composer">
+          <el-input
+            v-model="query"
+            type="textarea"
+            :rows="3"
+            resize="none"
+            placeholder="输入问题，按 Enter 发送，Shift + Enter 换行"
+            @keydown.enter.exact.prevent="qa"
+          />
+          <el-button type="primary" :icon="Promotion" :loading="searching" @click="qa">发送</el-button>
         </div>
       </el-card>
     </div>
@@ -162,24 +189,29 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox, type UploadFile, type UploadInstance } from 'element-plus'
+import { Delete, Promotion } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import LoadingState from '@/components/LoadingState.vue'
 import MarkdownViewer from '@/components/MarkdownViewer.vue'
-import { deleteKnowledgeFile, getKnowledgeFile, indexKnowledgeFile, listKnowledgeFiles, qaKnowledge, searchKnowledge, uploadKnowledgeFile } from '@/api/knowledge'
+import { deleteKnowledgeFile, getKnowledgeFile, indexKnowledgeFile, listKnowledgeFiles, qaKnowledge, uploadKnowledgeFile } from '@/api/knowledge'
 import { getDefaultSpace, listSpaces } from '@/api/learningSpace'
+import { getDefaultProvider, listProviders } from '@/api/modelProvider'
 import { formatDateTime } from '@/utils/format'
 
 const files = ref<any[]>([])
-const results = ref<any[]>([])
-const answer = ref('')
+const messages = ref<any[]>([])
 const fileDetail = ref<any>()
 const chunks = ref<any[]>([])
 const spaces = ref<any[]>([])
+const providers = ref<any[]>([])
+const modelProviderId = ref<number | null>(null)
 const query = ref('')
-const selectedFile = ref<File | null>(null)
+const chatScrollRef = ref<HTMLElement>()
+const uploadRef = ref<UploadInstance>()
+const selectedFiles = ref<File[]>([])
 const creating = ref(false)
 const loading = ref(false)
 const searching = ref(false)
@@ -199,6 +231,15 @@ async function loadSpaces() {
   spaces.value = data.records || []
 }
 
+async function loadProviders() {
+  const [data, defaultProvider] = await Promise.all([
+    listProviders({ pageNum: 1, pageSize: 50 }).catch(() => ({ records: [] })),
+    getDefaultProvider().catch(() => null)
+  ])
+  providers.value = data.records || []
+  modelProviderId.value = defaultProvider?.id || providers.value[0]?.id || null
+}
+
 async function load() {
   loading.value = true
   try {
@@ -214,22 +255,29 @@ async function load() {
 }
 
 async function handleSpaceChange() {
-  answer.value = ''
-  results.value = []
+  loadChat()
   fileDetail.value = undefined
   chunks.value = []
   detailVisible.value = false
   await load()
 }
 
-function handleFileChange(uploadFile: UploadFile) {
-  selectedFile.value = uploadFile.raw || null
+function syncSelectedFiles(uploadFiles: UploadFile[]) {
+  selectedFiles.value = uploadFiles.flatMap((item) => item.raw ? [item.raw] : [])
+}
+
+function handleFileChange(_uploadFile: UploadFile, uploadFiles: UploadFile[]) {
+  syncSelectedFiles(uploadFiles)
   uploadHint.value = ''
 }
 
-function handleFileRemove() {
-  selectedFile.value = null
+function handleFileRemove(_uploadFile: UploadFile, uploadFiles: UploadFile[]) {
+  syncSelectedFiles(uploadFiles)
   uploadHint.value = ''
+}
+
+function handleFileExceed() {
+  ElMessage.warning('一次最多上传 20 个资料文件')
 }
 
 async function uploadFile() {
@@ -237,21 +285,33 @@ async function uploadFile() {
     ElMessage.warning('请先选择学习空间')
     return
   }
-  if (!selectedFile.value) {
-    ElMessage.warning('请选择要上传的资料文件')
+  if (!selectedFiles.value.length) {
+    ElMessage.warning('请至少选择一个要上传的资料文件')
     return
   }
   creating.value = true
-  uploadHint.value = '资料正在上传并整理，请稍候。'
+  const pendingFiles = [...selectedFiles.value]
+  uploadHint.value = `正在上传并整理 ${pendingFiles.length} 个资料文件，请稍候。`
   try {
-    const file = await uploadKnowledgeFile(form.spaceId, selectedFile.value)
-    uploadHint.value = `资料已整理完成，共生成 ${file.chunkCount || 0} 个学习片段。`
-    ElMessage.success('资料已加入知识库')
-    selectedFile.value = null
+    const uploaded: any[] = []
+    const failed: string[] = []
+    for (const sourceFile of pendingFiles) {
+      try {
+        uploaded.push(await uploadKnowledgeFile(form.spaceId, sourceFile))
+      } catch {
+        failed.push(sourceFile.name)
+      }
+    }
+    const chunkCount = uploaded.reduce((total, item) => total + Number(item.chunkCount || 0), 0)
+    uploadHint.value = failed.length
+      ? `已整理 ${uploaded.length} 个文件、生成 ${chunkCount} 个学习片段；${failed.length} 个文件上传失败。`
+      : `已整理 ${uploaded.length} 个文件，共生成 ${chunkCount} 个学习片段。`
+    if (uploaded.length) ElMessage.success(`${uploaded.length} 个资料文件已加入知识库`)
+    if (failed.length) ElMessage.warning(`未成功上传：${failed.join('、')}`)
+    selectedFiles.value = []
+    uploadRef.value?.clearFiles()
     await load()
-    await viewFile(file.id)
-  } catch {
-    uploadHint.value = ''
+    if (uploaded.length === 1) await viewFile(uploaded[0].id)
   } finally {
     creating.value = false
   }
@@ -287,30 +347,98 @@ async function removeFile(row: any) {
   await load()
 }
 
-async function search() {
-  if (!form.spaceId) return ElMessage.warning('请先选择学习空间')
-  if (!query.value.trim()) return ElMessage.warning('请先输入你的问题')
-  searching.value = true
-  answer.value = ''
-  try {
-    const data = await searchKnowledge({ query: query.value, spaceId: form.spaceId, fileIds: currentSpaceFileIds(), topK: 5 })
-    results.value = data.results || []
-  } finally {
-    searching.value = false
-  }
-}
-
 async function qa() {
   if (!form.spaceId) return ElMessage.warning('请先选择学习空间')
   if (!query.value.trim()) return ElMessage.warning('请先输入你的问题')
+  const question = query.value.trim()
+  const history = messages.value.slice(-12).map((item) => ({ role: item.role, content: item.content }))
+  messages.value.push({ id: messageId(), role: 'user', content: question, citations: [] })
+  query.value = ''
+  saveChat()
+  await scrollChat()
   searching.value = true
   try {
-    const data = await qaKnowledge({ query: query.value, spaceId: form.spaceId, fileIds: currentSpaceFileIds(), topK: 5 })
-    answer.value = data.answerMarkdown
-    results.value = data.results || []
+    const data = await qaKnowledge({
+      query: question,
+      spaceId: form.spaceId,
+      modelProviderId: modelProviderId.value,
+      fileIds: currentSpaceFileIds(),
+      topK: 5,
+      history
+    })
+    messages.value.push({
+      id: messageId(),
+      role: 'assistant',
+      content: data.answerMarkdown || '当前资料不足以回答这个问题。',
+      citations: data.results || []
+    })
+    saveChat()
+  } catch {
+    messages.value.push({
+      id: messageId(),
+      role: 'assistant',
+      content: '本次资料问答没有完成，请检查 AI 服务配置后重试。',
+      citations: []
+    })
   } finally {
     searching.value = false
+    await scrollChat()
   }
+}
+
+function messageId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function chatKey() {
+  return form.spaceId ? `knowledge-chat-${form.spaceId}` : ''
+}
+
+function loadChat() {
+  const key = chatKey()
+  if (!key) {
+    messages.value = []
+    return
+  }
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(key) || '[]')
+    messages.value = Array.isArray(stored) ? stored.slice(-30) : []
+  } catch {
+    messages.value = []
+  }
+  scrollChat()
+}
+
+function saveChat() {
+  const key = chatKey()
+  if (key) sessionStorage.setItem(key, JSON.stringify(messages.value.slice(-30)))
+}
+
+function clearChat() {
+  messages.value = []
+  const key = chatKey()
+  if (key) sessionStorage.removeItem(key)
+  ElMessage.success('当前知识库对话已清空')
+}
+
+async function scrollChat() {
+  await nextTick()
+  if (chatScrollRef.value) chatScrollRef.value.scrollTop = chatScrollRef.value.scrollHeight
+}
+
+
+function sourceName(item: any) {
+  return item.sourceFileName || item.source || '知识片段'
+}
+
+function scorePercent(value: any) {
+  const num = Number(value || 0)
+  if (!Number.isFinite(num)) return '相关度 -'
+  return `相关度 ${Math.round(Math.min(1, Math.max(0, num)) * 100)}%`
+}
+
+function retrievalModeLabel(mode?: string) {
+  return ({ chroma: 'Chroma 向量检索', local_vector: '本地向量检索', mysql_fallback: 'MySQL 兜底检索', mysql: 'MySQL 检索' } as Record<string, string>)[mode || ''] || '知识库检索'
 }
 
 function currentSpaceFileIds() {
@@ -334,18 +462,31 @@ function spaceName(spaceId?: number) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadSpaces(), loadDefaults()])
+  await Promise.all([loadSpaces(), loadProviders(), loadDefaults()])
   await load()
+  loadChat()
 })
 </script>
 
 <style scoped>
-.actions {
-  margin: 12px 0;
+.knowledge-chat-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+
+.knowledge-chat-body {
+  height: 470px;
+  overflow-y: auto;
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 4px 14px;
 }
+
+.knowledge-message { display: flex; gap: 10px; align-items: flex-start; }
+.knowledge-message.user { flex-direction: row-reverse; }
+.message-role { flex: 0 0 auto; padding-top: 9px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.message-bubble { max-width: 86%; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-soft); }
+.knowledge-message.user .message-bubble { background: var(--primary-soft); border-color: var(--primary-border); }
+.user-message { margin: 0; white-space: pre-wrap; line-height: 1.75; }
+.knowledge-composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; padding-top: 12px; border-top: 1px solid var(--line); }
 
 .full-width,
 .upload-control {
@@ -384,10 +525,35 @@ onMounted(async () => {
   border-bottom: 1px solid var(--line);
 }
 
-.hit p {
-  margin: 6px 0;
+.evidence-collapse {
+  margin-top: 16px;
+}
+
+
+.hit-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.hit-meta {
+  margin: 3px 0 0;
   color: var(--muted);
+  font-size: 12px;
+}
+
+.hit-snippet {
+  margin: 8px 0;
+  color: var(--text);
   line-height: 1.7;
+}
+
+.hit-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .chunk-list {
@@ -407,5 +573,12 @@ onMounted(async () => {
   margin: 8px 0 0;
   color: var(--text);
   line-height: 1.7;
+}
+
+@media (max-width: 760px) {
+  .knowledge-chat-head { align-items: flex-start; flex-direction: column; }
+  .knowledge-chat-body { height: 420px; }
+  .message-bubble { max-width: 92%; }
+  .knowledge-composer { grid-template-columns: 1fr; }
 }
 </style>

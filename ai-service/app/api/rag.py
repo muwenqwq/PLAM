@@ -8,6 +8,7 @@ from app.core.openai_compatible_provider import OpenAICompatibleProvider
 from app.rag.chunker import chunk_text
 from app.rag.embedding import stable_hash
 from app.rag.parser import parse_text
+from app.rag.vector_store import delete_chunks, search_chunks, upsert_chunks
 from app.schemas.model import AiModelConfig
 from app.schemas.rag import RagChunk, RagIndexRequest, RagIndexResponse, RagQaRequest, RagQaResponse, RagSearchRequest, RagSearchResponse
 
@@ -20,12 +21,19 @@ def index_file(request: RagIndexRequest) -> RagIndexResponse:
     chunks = _chunk_with_model(request, text)
     parser_status = "ai_indexed" if chunks else "indexed"
     chunks = chunks or chunk_text(request.file_id, request.file_name, text)
+    upsert_chunks(request, chunks)
     return RagIndexResponse(success=True, parser_status=parser_status, chunk_count=len(chunks), chunks=chunks)
+
+
+@router.delete("/index/{file_id}")
+def delete_index(file_id: int) -> dict[str, Any]:
+    delete_chunks(file_id)
+    return {"success": True, "file_id": file_id}
 
 
 @router.post("/search", response_model=RagSearchResponse)
 def search(request: RagSearchRequest) -> RagSearchResponse:
-    results: list[RagChunk] = []
+    results = search_chunks(request)
     return RagSearchResponse(success=True, query=request.query, results=results)
 
 
@@ -35,22 +43,77 @@ def qa(request: RagQaRequest) -> RagQaResponse:
     if not citations:
         return RagQaResponse(
             success=True,
-            answer_markdown=f"没有收到真实资料片段，无法基于资料回答“{request.query}”。",
+            answer_markdown=f"当前学习空间里没有检索到能够支持这个问题的资料，因此无法依据知识库回答“{request.query}”。你可以换个问法，或先上传相关资料。",
             citations=[],
-            result_json={"mock": False, "citation_count": 0, "query": request.query},
+            result_json={"grounded": True, "citation_count": 0, "query": request.query, "provider": "none"},
         )
-    source_names = "、".join([item.source or item.metadata.get("file_name", "资料片段") for item in citations[:3]])
-    answer = (
-        f"根据知识库检索结果，关于“{request.query}”可以先从定义、关键步骤和易错点三方面理解。\n\n"
-        f"参考来源：{source_names}。\n\n"
-        "建议先阅读得分最高的片段，再把其中的概念整理成自己的复习卡片。"
-    )
+    provider = "grounded_fallback"
+    answer = _grounded_fallback(request, citations)
+    if _can_use_model(request.model):
+        result = OpenAICompatibleProvider()._complete(
+            request.model,
+            _qa_messages(request, citations),
+            max_tokens=min(max(request.model.max_tokens or 2048, 1200), 5000),
+        )
+        answer = result["content"].strip()
+        provider = f"{request.model.provider_type}:{request.model.model_name}"
     return RagQaResponse(
         success=True,
         answer_markdown=answer,
         citations=citations,
-        result_json={"mock": False, "citation_count": len(citations), "query": request.query},
+        result_json={"grounded": True, "citation_count": len(citations), "query": request.query, "provider": provider},
     )
+
+
+def _qa_messages(request: RagQaRequest, citations: list[RagChunk]) -> list[dict[str, str]]:
+    context_blocks: list[str] = []
+    for index, item in enumerate(citations[:8], start=1):
+        source = item.source_file_name or item.source or item.metadata.get("file_name", "学习资料")
+        context_blocks.append(
+            f"[来源{index}] {source}（片段 {item.chunk_index}）\n{item.content_text[:1800]}"
+        )
+    profile = json.dumps(request.profile or {}, ensure_ascii=False)
+    messages: list[dict[str, str]] = [
+        {
+            "role": "system",
+            "content": (
+                "你是智学工坊的知识库学习助手。请始终使用中文回答，只能依据本轮提供的资料片段，"
+                "不得把常识或猜测写成资料事实。回答要直接解决学生的问题，并在关键结论后标注 [来源1] 这样的引用。"
+                "如果资料不足以回答，要明确指出缺少什么信息。不要复述整段资料，也不要输出检索过程。\n"
+                f"学生画像：{profile}"
+            ),
+        }
+    ]
+    for item in request.history[-8:]:
+        if item.role in {"user", "assistant"} and item.content.strip():
+            messages.append({"role": item.role, "content": item.content[:8000]})
+    messages.append(
+        {
+            "role": "user",
+            "content": "可引用资料如下：\n\n" + "\n\n".join(context_blocks) + f"\n\n本轮问题：{request.query}",
+        }
+    )
+    return messages
+
+
+def _grounded_fallback(request: RagQaRequest, citations: list[RagChunk]) -> str:
+    first = citations[0]
+    source = first.source_file_name or first.source or first.metadata.get("file_name", "学习资料")
+    excerpt = re.sub(r"\s+", " ", first.content_text).strip()[:700]
+    lines = [
+        f"从当前资料可以确认：{excerpt} [来源1]",
+        "",
+        f"这段内容与“{request.query}”直接相关。建议先按资料中的定义或步骤复述一遍，再结合例题检查自己是否真正理解。",
+        "",
+        f"**主要依据**：{source}，片段 {first.chunk_index}。",
+    ]
+    if len(citations) > 1:
+        second = citations[1]
+        second_source = second.source_file_name or second.source or second.metadata.get("file_name", "学习资料")
+        second_excerpt = re.sub(r"\s+", " ", second.content_text).strip()[:360]
+        lines.insert(2, f"补充资料指出：{second_excerpt} [来源2]")
+        lines.append(f"补充依据：{second_source}，片段 {second.chunk_index}。")
+    return "\n".join(lines)
 
 
 def _chunk_with_model(request: RagIndexRequest, text: str) -> list[RagChunk] | None:

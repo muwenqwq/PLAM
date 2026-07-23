@@ -29,4 +29,10 @@ public class AiRagChunkDTO {
     private BigDecimal score;
 
     private String source;
+
+    @JsonProperty("source_file_name")
+    private String sourceFileName;
+
+    @JsonProperty("retrieval_mode")
+    private String retrievalMode;
 }

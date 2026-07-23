@@ -8,7 +8,7 @@
 </template>
 <script setup lang="ts">
 defineProps<{ resource: any }>()
-const names: Record<string, string> = { plan: '学习计划', lecture_note: '讲义', review_outline: '复习提纲', quiz_set: '习题集', case_task: '案例任务', knowledge_graph: '知识图谱', ppt_outline: 'PPT 大纲' }
+const names: Record<string, string> = { plan: '学习计划', lecture_note: '课程笔记', summary: '知识点总结', review_outline: '复习提纲', mistake_review: '错题整理', quiz_set: '练习题', case_task: '案例任务', knowledge_graph: '思维导图' }
 function typeName(type: string) { return names[type] || type }
 </script>
 <style scoped>

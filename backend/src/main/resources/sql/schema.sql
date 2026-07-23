@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS knowledge_chunk;
 DROP TABLE IF EXISTS knowledge_file;
 DROP TABLE IF EXISTS conversation_message;
 DROP TABLE IF EXISTS conversation;
+DROP TABLE IF EXISTS ai_companion_role;
 DROP TABLE IF EXISTS ai_model_provider;
 DROP TABLE IF EXISTS learning_preference;
 DROP TABLE IF EXISTS user_profile;
@@ -114,6 +115,8 @@ CREATE TABLE user_profile (
   major VARCHAR(128) NULL COMMENT 'Major name',
   grade_level VARCHAR(64) NULL COMMENT 'Grade level',
   learning_goal VARCHAR(1000) NULL COMMENT 'Main learning goal',
+  profile_narrative TEXT NULL COMMENT 'Natural-language learner self description',
+  adaptive_summary TEXT NULL COMMENT 'System-maintained learner profile summary',
   subject_direction VARCHAR(128) NULL COMMENT 'Subject direction',
   foundation_level VARCHAR(64) NULL COMMENT 'beginner, intermediate, advanced',
   interest_tags JSON NULL COMMENT 'Interest tags',
@@ -123,6 +126,9 @@ CREATE TABLE user_profile (
   available_time_slots JSON NULL COMMENT 'Available study time slots',
   output_style VARCHAR(64) NULL COMMENT 'Preferred output style',
   profile_source VARCHAR(32) NOT NULL DEFAULT 'manual' COMMENT 'manual, chat, assessment',
+  last_activity_source VARCHAR(64) NULL COMMENT 'Latest profile update source',
+  last_activity_summary VARCHAR(1000) NULL COMMENT 'Latest learning activity summary',
+  last_activity_at DATETIME NULL COMMENT 'Latest learning activity time',
   status VARCHAR(32) NOT NULL DEFAULT 'active' COMMENT 'active, incomplete',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Created time',
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Updated time',
@@ -181,13 +187,43 @@ CREATE TABLE ai_model_provider (
   KEY idx_ai_model_provider_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='User AI model provider configuration';
 
+
+CREATE TABLE ai_companion_role (
+  id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Primary key',
+  user_id BIGINT NOT NULL COMMENT 'Owner user id',
+  role_name VARCHAR(100) NOT NULL COMMENT 'Companion role name',
+  role_identity VARCHAR(100) NULL COMMENT 'Role identity such as tutor or study partner',
+  avatar_url VARCHAR(512) NULL COMMENT 'Avatar URL',
+  theme_color VARCHAR(32) NULL COMMENT 'Role theme color',
+  background TEXT NULL COMMENT 'Role background',
+  personality TEXT NULL COMMENT 'Role personality',
+  expertise VARCHAR(500) NULL COMMENT 'Subjects or learning skills the role is good at',
+  hobbies VARCHAR(500) NULL COMMENT 'Role hobbies',
+  speaking_style VARCHAR(500) NULL COMMENT 'Speaking style',
+  scenario VARCHAR(500) NULL COMMENT 'Interaction scenario',
+  companion_goal VARCHAR(500) NULL COMMENT 'Learning companion goal',
+  boundaries TEXT NULL COMMENT 'Interaction boundaries',
+  custom_prompt TEXT NULL COMMENT 'Extra user-defined prompt',
+  tags VARCHAR(500) NULL COMMENT 'Display tags',
+  is_default TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Default companion role flag',
+  status VARCHAR(32) NOT NULL DEFAULT 'active' COMMENT 'active, disabled',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Created time',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Updated time',
+  deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Logical deletion flag',
+  PRIMARY KEY (id),
+  KEY idx_ai_companion_role_user_default (user_id, is_default, deleted),
+  KEY idx_ai_companion_role_user_status (user_id, status, deleted),
+  KEY idx_ai_companion_role_name (role_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='User AI companion role';
 CREATE TABLE conversation (
   id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Primary key',
   user_id BIGINT NOT NULL COMMENT 'Owner user id',
-  space_id BIGINT NULL COMMENT 'Logical FK to learning_space.id',
+  space_id BIGINT NOT NULL COMMENT 'Logical FK to learning_space.id',
   title VARCHAR(200) NOT NULL COMMENT 'Conversation title',
   intent_type VARCHAR(64) NULL COMMENT 'Recognized intent type',
   summary VARCHAR(1000) NULL COMMENT 'Conversation summary',
+  role_id BIGINT NULL COMMENT 'Logical FK to ai_companion_role.id',
+  role_play_enabled TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether role play mode is enabled',
   message_count INT NOT NULL DEFAULT 0 COMMENT 'Cached message count',
   status VARCHAR(32) NOT NULL DEFAULT 'active' COMMENT 'active, archived',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Created time',
@@ -196,6 +232,7 @@ CREATE TABLE conversation (
   PRIMARY KEY (id),
   KEY idx_conversation_user_status (user_id, status, deleted),
   KEY idx_conversation_space (space_id, deleted),
+  KEY idx_conversation_role (role_id, deleted),
   KEY idx_conversation_updated_at (updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Learning conversation';
 
@@ -262,7 +299,7 @@ CREATE TABLE knowledge_chunk (
 CREATE TABLE agent_task (
   id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Primary key',
   user_id BIGINT NOT NULL COMMENT 'Owner user id',
-  space_id BIGINT NULL COMMENT 'Logical FK to learning_space.id',
+  space_id BIGINT NOT NULL COMMENT 'Logical FK to learning_space.id',
   provider_id BIGINT NULL COMMENT 'Logical FK to ai_model_provider.id',
   task_type VARCHAR(64) NOT NULL COMMENT 'resource_generation, path_planning, quiz_generation, report_generation',
   title VARCHAR(200) NOT NULL COMMENT 'Task title',
@@ -310,7 +347,7 @@ CREATE TABLE agent_step (
 CREATE TABLE generated_resource (
   id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Primary key',
   user_id BIGINT NOT NULL COMMENT 'Owner user id',
-  space_id BIGINT NULL COMMENT 'Logical FK to learning_space.id',
+  space_id BIGINT NOT NULL COMMENT 'Logical FK to learning_space.id',
   task_id BIGINT NULL COMMENT 'Logical FK to agent_task.id',
   resource_type VARCHAR(64) NOT NULL COMMENT 'plan, lecture, outline, quiz, case, graph, report',
   title VARCHAR(200) NOT NULL COMMENT 'Resource title',
@@ -404,6 +441,7 @@ CREATE TABLE quiz_question (
   options_json JSON NULL COMMENT 'Question options',
   answer_text TEXT NULL COMMENT 'Standard answer',
   analysis_text TEXT NULL COMMENT 'Answer analysis',
+  option_analysis_json JSON NULL COMMENT 'Per-option correctness explanations',
   knowledge_points JSON NULL COMMENT 'Related knowledge points',
   difficulty VARCHAR(32) NOT NULL DEFAULT 'normal' COMMENT 'easy, normal, hard',
   score DECIMAL(6,2) NOT NULL DEFAULT 10.00 COMMENT 'Question score',

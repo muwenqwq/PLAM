@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,7 +49,7 @@ class QuizControllerTest {
     void shouldGenerateSubmitAndReturnMastery() throws Exception {
         when(quizService.generate(any(QuizGenerateRequest.class))).thenReturn(QuizVO.builder().id(1L).title("数据库测验").build());
         when(quizService.submit(eq(1L), any(QuizSubmitRequest.class))).thenReturn(QuizResultVO.builder().quizId(1L).score(BigDecimal.TEN).totalScore(BigDecimal.TEN).build());
-        when(quizService.mastery()).thenReturn(List.of(MasteryRecordVO.builder().knowledgePoint("索引").masteryLevel(BigDecimal.valueOf(90)).build()));
+        when(quizService.mastery(null)).thenReturn(List.of(MasteryRecordVO.builder().knowledgePoint("索引").masteryLevel(BigDecimal.valueOf(90)).build()));
 
         mockMvc.perform(post("/api/quizzes/generate")
                         .with(authentication(auth()))
@@ -67,6 +68,12 @@ class QuizControllerTest {
         mockMvc.perform(get("/api/mastery/me").with(authentication(auth())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].knowledgePoint").value("索引"));
+    }
+
+    @Test
+    void shouldDeleteOwnedQuiz() throws Exception {
+        mockMvc.perform(delete("/api/quizzes/1").with(authentication(auth())))
+                .andExpect(status().isOk());
     }
 
     private static UsernamePasswordAuthenticationToken auth() {

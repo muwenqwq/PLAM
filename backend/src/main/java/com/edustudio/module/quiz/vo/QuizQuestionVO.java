@@ -17,6 +17,7 @@ public class QuizQuestionVO {
     private JsonNode options;
     private String answerText;
     private String analysisText;
+    private JsonNode optionExplanations;
     private JsonNode knowledgePoints;
     private String difficulty;
     private BigDecimal score;

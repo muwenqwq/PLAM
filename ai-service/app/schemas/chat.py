@@ -22,6 +22,8 @@ class ChatRequest(BaseModel):
     history: list[ChatHistoryMessage] = Field(default_factory=list)
     profile: dict[str, Any] | None = None
     preference: dict[str, Any] | None = None
+    role_play_enabled: bool = False
+    companion_role: dict[str, Any] | None = None
 
 
 class ChatResponse(BaseModel):

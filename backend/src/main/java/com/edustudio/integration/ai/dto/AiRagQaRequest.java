@@ -7,12 +7,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AiRagQaRequest {
+
+    @JsonProperty("model_config")
+    private AiModelConfigDTO modelConfig;
 
     private String query;
 
@@ -23,4 +27,8 @@ public class AiRagQaRequest {
     private Integer topK;
 
     private List<AiRagChunkDTO> context;
+
+    private Map<String, Object> profile;
+
+    private List<Map<String, String>> history;
 }

@@ -24,6 +24,7 @@ import com.edustudio.module.agent.vo.AgentTaskResultVO;
 import com.edustudio.module.agent.vo.AgentTaskVO;
 import com.edustudio.module.learningspace.service.LearningSpaceService;
 import com.edustudio.module.modelprovider.service.ModelProviderService;
+import com.edustudio.module.profile.service.UserProfileService;
 import com.edustudio.module.knowledge.service.KnowledgeService;
 import com.edustudio.module.knowledge.vo.KnowledgeSearchResultVO;
 import com.edustudio.module.resource.entity.GeneratedResource;
@@ -55,6 +56,7 @@ public class AgentTaskServiceImpl implements AgentTaskService {
     private final ModelProviderService modelProviderService;
     private final AiServiceClient aiServiceClient;
     private final KnowledgeService knowledgeService;
+    private final UserProfileService userProfileService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -165,6 +167,10 @@ public class AgentTaskServiceImpl implements AgentTaskService {
             });
         }
         boolean useKnowledgeBase = params.path("use_knowledge_base").asBoolean(false);
+        if (request.getSpaceId() != null) {
+            params.set("learner_profile", JsonUtils.fromJson(
+                    JsonUtils.toJson(userProfileService.getAiProfile(request.getSpaceId())), JsonNode.class));
+        }
         if (request.getSpaceId() != null && (useKnowledgeBase || !fileIds.isEmpty())) {
             KnowledgeSearchResultVO context = knowledgeService.generationContext(request.getSpaceId(), fileIds, 8);
             var contextArray = params.putArray("knowledge_context");
@@ -198,6 +204,7 @@ public class AgentTaskServiceImpl implements AgentTaskService {
 
             List<AgentStepVO> stepVOs = persistSteps(task, nullSafe(response.getSteps()));
             List<GeneratedResourceVO> resourceVOs = persistResources(task, nullSafe(response.getResources()));
+            userProfileService.recordActivity(task.getSpaceId(), subject, List.of(), List.of(), "agent_resource_generation");
             task.setExecutionStatus(StringUtils.hasText(response.getExecutionStatus())
                     ? response.getExecutionStatus()
                     : "succeeded");

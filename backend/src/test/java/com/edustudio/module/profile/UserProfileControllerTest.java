@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -61,6 +62,8 @@ class UserProfileControllerTest {
                 .realName("张同学")
                 .school("示例大学")
                 .major("软件工程")
+                .profileNarrative("我正在准备数据库期末考试，希望通过例题理解索引和事务。")
+                .adaptiveSummary("当前目标是数据库期末复习，最近正在关注索引和事务。")
                 .weeklyAvailableHours(new BigDecimal("8.00"))
                 .status("active")
                 .build();
@@ -74,12 +77,14 @@ class UserProfileControllerTest {
                                   "realName": "张同学",
                                   "school": "示例大学",
                                   "major": "软件工程",
+                                  "profileNarrative": "我正在准备数据库期末考试，希望通过例题理解索引和事务。",
                                   "weeklyAvailableHours": 8
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200"))
-                .andExpect(jsonPath("$.data.realName").value("张同学"));
+                .andExpect(jsonPath("$.data.realName").value("张同学"))
+                .andExpect(jsonPath("$.data.profileNarrative").value("我正在准备数据库期末考试，希望通过例题理解索引和事务。"));
     }
 
     @Test
@@ -107,6 +112,23 @@ class UserProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200"))
                 .andExpect(jsonPath("$.data.spaceId").value(100));
+    }
+
+    @Test
+    void shouldReanalyzeProfileForOwnedLearningSpace() throws Exception {
+        UserProfileVO response = UserProfileVO.builder()
+                .userId(3L)
+                .spaceId(100L)
+                .adaptiveSummary("根据测验和学习对话，当前应优先巩固索引并采用分步骤讲解。")
+                .profileSource("ai_adaptive")
+                .build();
+        when(userProfileService.reanalyzeBySpace(100L)).thenReturn(response);
+
+        mockMvc.perform(post("/api/profiles/space/100/analyze")
+                        .with(authenticatedUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200"))
+                .andExpect(jsonPath("$.data.profileSource").value("ai_adaptive"));
     }
 
     private static RequestPostProcessor authenticatedUser() {

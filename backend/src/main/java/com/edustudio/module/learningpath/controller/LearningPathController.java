@@ -5,6 +5,7 @@ import com.edustudio.common.api.Result;
 import com.edustudio.module.learningpath.dto.LearningPathGenerateRequest;
 import com.edustudio.module.learningpath.dto.LearningPathItemStatusRequest;
 import com.edustudio.module.learningpath.dto.LearningPathQueryRequest;
+import com.edustudio.module.learningpath.dto.LearningPathUpdateRequest;
 import com.edustudio.module.learningpath.service.LearningPathService;
 import com.edustudio.module.learningpath.vo.LearningPathItemVO;
 import com.edustudio.module.learningpath.vo.LearningPathVO;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -50,6 +52,13 @@ public class LearningPathController {
         return Result.success(learningPathService.detail(id));
     }
 
+    @Operation(summary = "编辑学习路径及任务")
+    @PutMapping("/learning-paths/{id}")
+    public Result<LearningPathVO> update(@PathVariable Long id,
+                                         @Valid @RequestBody LearningPathUpdateRequest request) {
+        return Result.success(learningPathService.update(id, request));
+    }
+
     @Operation(summary = "更新路径任务状态")
     @PutMapping("/learning-path-items/{id}/status")
     public Result<LearningPathItemVO> updateItemStatus(@PathVariable Long id, @Valid @RequestBody LearningPathItemStatusRequest request) {
@@ -58,8 +67,8 @@ public class LearningPathController {
 
     @Operation(summary = "查询今日学习任务")
     @GetMapping("/learning-paths/today")
-    public Result<List<LearningPathItemVO>> today() {
-        return Result.success(learningPathService.today());
+    public Result<List<LearningPathItemVO>> today(@RequestParam(required = false) Long spaceId) {
+        return Result.success(learningPathService.today(spaceId));
     }
 
     @Operation(summary = "调整学习路径")

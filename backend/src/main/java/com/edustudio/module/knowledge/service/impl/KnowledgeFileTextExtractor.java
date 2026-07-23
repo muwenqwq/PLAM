@@ -2,6 +2,8 @@ package com.edustudio.module.knowledge.service.impl;
 
 import com.edustudio.common.api.ResultCode;
 import com.edustudio.common.exception.BusinessException;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.w3c.dom.Document;
@@ -36,6 +38,9 @@ public class KnowledgeFileTextExtractor {
             throw new BusinessException(ResultCode.BAD_REQUEST, "上传文件不能为空");
         }
         String extension = extensionOf(originalName);
+        if ("pdf".equals(extension) || isPdfContentType(contentType)) {
+            return normalize(extractPdfText(bytes));
+        }
         if ("docx".equals(extension)) {
             return normalize(extractOfficeText(bytes, name -> "word/document.xml".equals(name)));
         }
@@ -43,12 +48,12 @@ public class KnowledgeFileTextExtractor {
             return normalize(extractOfficeText(bytes, name -> name.startsWith("ppt/slides/slide") && name.endsWith(".xml")));
         }
         if (looksLikeZip(bytes)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "Office file must be uploaded as docx or pptx, not decoded as plain text");
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Office 文件请以 docx 或 pptx 上传，不能按普通文本解析");
         }
         if (isText(extension, contentType)) {
             return normalize(decodeText(bytes));
         }
-        throw new BusinessException(ResultCode.BAD_REQUEST, "暂不支持该文件类型自动解析，请上传 txt、md、csv、json、docx 或 pptx 文件");
+        throw new BusinessException(ResultCode.BAD_REQUEST, "暂不支持该文件类型自动解析，请上传 txt、md、csv、json、pdf、docx 或 pptx 文件");
     }
 
     private boolean isText(String extension, String contentType) {
@@ -64,6 +69,27 @@ public class KnowledgeFileTextExtractor {
                 || lower.contains("xml")
                 || lower.contains("csv")
                 || lower.contains("yaml");
+    }
+
+    private boolean isPdfContentType(String contentType) {
+        return StringUtils.hasText(contentType) && contentType.toLowerCase().contains("pdf");
+    }
+
+    private String extractPdfText(byte[] bytes) {
+        try (PDDocument document = PDDocument.load(bytes)) {
+            if (document.isEncrypted()) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "暂不支持加密 PDF，请先解除密码后再上传");
+            }
+            String text = new PDFTextStripper().getText(document);
+            if (!StringUtils.hasText(text)) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "当前只支持文字版 PDF，不支持扫描版 PDF/OCR，请上传可复制文字的 PDF 或先转成文本文件");
+            }
+            return text;
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "PDF 文件解析失败，请确认文件未损坏且包含可复制文字");
+        }
     }
 
     private String decodeText(byte[] bytes) {

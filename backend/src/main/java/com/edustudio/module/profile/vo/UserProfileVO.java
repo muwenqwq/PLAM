@@ -31,6 +31,10 @@ public class UserProfileVO {
 
     private String learningGoal;
 
+    private String profileNarrative;
+
+    private String adaptiveSummary;
+
     private String subjectDirection;
 
     private String foundationLevel;
@@ -48,6 +52,12 @@ public class UserProfileVO {
     private String outputStyle;
 
     private String profileSource;
+
+    private String lastActivitySource;
+
+    private String lastActivitySummary;
+
+    private LocalDateTime lastActivityAt;
 
     private String status;
 

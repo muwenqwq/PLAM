@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,4 +27,12 @@ public class AiResourceGenerateRequest {
 
     @JsonProperty("input_params")
     private JsonNode inputParams;
+
+    private Map<String, Object> profile;
+
+    @JsonProperty("role_play_enabled")
+    private Boolean rolePlayEnabled;
+
+    @JsonProperty("companion_role")
+    private Map<String, Object> companionRole;
 }

@@ -1,0 +1,26 @@
+智学工坊 EduAgent Studio - 源码包说明
+=====================================
+
+一、目录组成
+1. frontend：Vue 学生端。
+2. backend：Spring Boot 后端。
+3. ai-service：FastAPI AI 服务。
+4. database：数据库结构与演示数据。
+5. scripts：本地启动、停止和端到端烟测脚本。
+6. release：Windows 便携运行包脚本与说明。
+7. docs：项目设计和接口文档。
+
+二、源码包排除内容
+为控制提交体积并避免携带运行数据，源码包不包含 .git、.venv、venv、node_modules、__pycache__、构建产物、RAG 运行缓存、npm 缓存、后端上传数据、日志、临时文件、local.env 或真实密钥。
+
+三、开发环境启动
+1. 准备 MySQL 8、Java 21、Maven、Node.js 和 Python 3.11+。
+2. 按根目录 README.md 配置数据库与 AI 服务。
+3. 可使用 scripts\start-dev.ps1 启动开发环境。
+4. 可使用 scripts\smoke-test.ps1 执行完整学习流程回归测试。
+
+四、演示账号
+用户名：demo_student
+密码：123456
+
+正式评审演示建议直接使用“作品安装运行包”，无需自行安装开发依赖。

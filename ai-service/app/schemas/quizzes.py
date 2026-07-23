@@ -14,7 +14,10 @@ class QuizGenerateRequest(BaseModel):
     knowledge_points: list[str] = Field(default_factory=list)
     question_count: int = 5
     difficulty: str = "medium"
-    question_type: str = "mixed"
+    question_type: str = "single_choice"
+    profile: dict[str, Any] = Field(default_factory=dict)
+    role_play_enabled: bool = False
+    companion_role: dict[str, Any] | None = None
 
 
 class QuizQuestion(BaseModel):
@@ -24,6 +27,7 @@ class QuizQuestion(BaseModel):
     options: list[str] = Field(default_factory=list)
     answer_text: str
     analysis_text: str
+    option_explanations: dict[str, str] = Field(default_factory=dict)
     knowledge_points: list[str] = Field(default_factory=list)
     difficulty: str = "medium"
     score: float = 10
@@ -47,6 +51,9 @@ class QuizAnalyzeRequest(BaseModel):
     total_score: float
     weak_points: list[str] = Field(default_factory=list)
     answers: list[dict[str, Any]] = Field(default_factory=list)
+    profile: dict[str, Any] = Field(default_factory=dict)
+    role_play_enabled: bool = False
+    companion_role: dict[str, Any] | None = None
 
 
 class QuizAnalyzeResponse(BaseModel):

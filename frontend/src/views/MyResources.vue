@@ -15,6 +15,9 @@
             <p class="section-subtitle">生成后的资源会保存在这里，可以继续修改或删除。</p>
           </div>
           <div class="inline-actions">
+            <el-select v-model="selectedSpaceId" placeholder="选择学习空间" style="width: 190px" @change="handleSpaceChange">
+              <el-option v-for="space in spaces" :key="space.id" :label="space.spaceName" :value="space.id" />
+            </el-select>
             <el-select v-model="filterType" placeholder="全部类型" clearable style="width: 160px">
               <el-option v-for="item in resourceTypes" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
@@ -39,6 +42,19 @@
           </div>
           <div class="resource-actions">
             <el-button size="small" @click="viewResource(item.id)">查看</el-button>
+            <el-button v-if="item.resourceType === 'quiz_set'" size="small" type="primary" @click="openQuizResource(item)">开始测验</el-button>
+            <el-dropdown @command="(format) => downloadResource(item, format)">
+              <el-button size="small">导出<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="docx">Word 文档</el-dropdown-item>
+                  <el-dropdown-item command="pdf">PDF 文档</el-dropdown-item>
+                  <el-dropdown-item command="png">长图 PNG</el-dropdown-item>
+                  <el-dropdown-item command="md" divided>Markdown 原文</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-button v-if="item.resourceType !== 'quiz_set'" size="small" type="success" plain @click="createGraph(item)">生成图谱</el-button>
             <el-button size="small" type="primary" plain @click="openEdit(item)">修改</el-button>
             <el-button size="small" type="danger" plain @click="removeResource(item)">删除</el-button>
           </div>
@@ -65,6 +81,19 @@
         <MarkdownViewer :content="current.contentMarkdown || ''" />
       </template>
       <template #footer>
+        <el-button v-if="current?.resourceType === 'quiz_set'" type="primary" @click="openQuizResource(current)">进入测验</el-button>
+        <el-dropdown v-if="current" @command="(format) => downloadResource(current, format)">
+          <el-button>导出文件<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="docx">Word 文档</el-dropdown-item>
+              <el-dropdown-item command="pdf">PDF 文档</el-dropdown-item>
+              <el-dropdown-item command="png">长图 PNG</el-dropdown-item>
+              <el-dropdown-item command="md" divided>Markdown 原文</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <el-button v-if="current && current.resourceType !== 'quiz_set'" type="success" plain @click="createGraph(current)">生成知识图谱</el-button>
         <el-button v-if="current" @click="openEdit(current)">修改</el-button>
         <el-button type="primary" @click="viewVisible = false">关闭</el-button>
       </template>
@@ -104,18 +133,20 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import MarkdownViewer from '@/components/MarkdownViewer.vue'
 import MermaidViewer from '@/components/MermaidViewer.vue'
-import { deleteResource, getResource, listResources, updateResource } from '@/api/resource'
-import { listSpaces } from '@/api/learningSpace'
+import { deleteResource, downloadResourceFile, generateGraphFromResource, getResource, listResources, updateResource } from '@/api/resource'
+import { getDefaultSpace, listSpaces } from '@/api/learningSpace'
 import { formatDateTime } from '@/utils/format'
 
 const router = useRouter()
 const route = useRoute()
 const resources = ref<any[]>([])
 const spaces = ref<any[]>([])
+const selectedSpaceId = ref<number | null>(null)
 const filterType = ref('')
 const loading = ref(false)
 const saving = ref(false)
@@ -155,15 +186,30 @@ const spaceMap = computed(() => new Map(spaces.value.map((s) => [s.id, s.spaceNa
 async function load() {
   loading.value = true
   try {
-    const [resourceData, spaceData] = await Promise.all([
-      listResources({ pageNum: 1, pageSize: 100 }).catch(() => ({ records: [] })),
-      listSpaces({ pageNum: 1, pageSize: 50 }).catch(() => ({ records: [] }))
-    ])
+    if (!spaces.value.length) {
+      const [spaceData, defaultSpace] = await Promise.all([
+        listSpaces({ pageNum: 1, pageSize: 50 }).catch(() => ({ records: [] })),
+        getDefaultSpace().catch(() => null)
+      ])
+      spaces.value = spaceData.records || []
+      const routeSpaceId = Number(route.query.spaceId)
+      selectedSpaceId.value = Number.isFinite(routeSpaceId) && spaces.value.some((space) => space.id === routeSpaceId)
+        ? routeSpaceId
+        : defaultSpace?.id || spaces.value[0]?.id || null
+    }
+    const resourceData = selectedSpaceId.value
+      ? await listResources({ spaceId: selectedSpaceId.value, pageNum: 1, pageSize: 100 }).catch(() => ({ records: [] }))
+      : { records: [] }
     resources.value = resourceData.records || []
-    spaces.value = spaceData.records || []
   } finally {
     loading.value = false
   }
+}
+
+async function handleSpaceChange() {
+  current.value = undefined
+  viewVisible.value = false
+  await load()
 }
 
 async function viewResource(id: number) {
@@ -232,6 +278,53 @@ function typeName(type: string) {
 
 function sourceName(item: any) {
   return spaceMap.value.get(item.spaceId) || item.subject || '当前学习空间'
+}
+
+
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+type ExportFormat = 'docx' | 'pdf' | 'png' | 'md'
+
+function resourceFilename(item: any, format: ExportFormat) {
+  const title = (item?.title || `resource-${item?.id || Date.now()}`).replace(/[\\/:*?"<>|]+/g, '_').trim()
+  return `${title || 'resource'}.${format}`
+}
+
+async function downloadResource(item: any, format: ExportFormat = 'docx') {
+  const blob = await downloadResourceFile(item.id, format)
+  saveBlob(blob, resourceFilename(item, format))
+  const labels: Record<ExportFormat, string> = { docx: 'Word', pdf: 'PDF', png: '长图', md: 'Markdown' }
+  ElMessage.success(`${labels[format]} 文件已开始下载`)
+}
+
+async function createGraph(item: any) {
+  const graph = await generateGraphFromResource(item.id)
+  ElMessage.success('知识图谱已生成并保存')
+  await load()
+  current.value = graph
+  viewVisible.value = true
+}
+
+async function openQuizResource(item: any) {
+  const detail = item?.contentJson === undefined ? await getResource(item.id) : item
+  const quizId = Number(detail?.contentJson?.quizId)
+  viewVisible.value = false
+  await router.push({
+    path: '/quiz',
+    query: {
+      spaceId: detail.spaceId || selectedSpaceId.value || undefined,
+      quizId: Number.isFinite(quizId) && quizId > 0 ? quizId : undefined
+    }
+  })
 }
 
 function extractMermaid(item: any) {

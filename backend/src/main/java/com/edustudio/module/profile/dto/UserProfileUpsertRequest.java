@@ -26,6 +26,9 @@ public class UserProfileUpsertRequest {
     @Size(max = 1000, message = "学习目标不能超过 1000 个字符")
     private String learningGoal;
 
+    @Size(max = 4000, message = "学习情况描述不能超过 4000 个字符")
+    private String profileNarrative;
+
     @Size(max = 128, message = "学科方向不能超过 128 个字符")
     private String subjectDirection;
 

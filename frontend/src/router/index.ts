@@ -18,12 +18,13 @@ const routes: RouteRecordRaw[] = [
       { path: 'resources', component: () => import('@/views/MyResources.vue'), meta: { title: '我的资源', description: '查看、修改和整理已经生成的学习资料。' } },
       { path: 'quiz', component: () => import('@/views/Quiz.vue'), meta: { title: '学习测验', description: '用小测验检查掌握情况。' } },
       { path: 'reports', alias: '/report', component: () => import('@/views/Report.vue'), meta: { title: '学习报告', description: '查看阶段进展和下一步建议。' } },
-      { path: 'profile', component: () => import('@/views/UserProfile.vue'), meta: { title: '个人中心', description: '维护学习目标、偏好和个人资料。' } },
+      { path: 'chat', component: () => import('@/views/ChatAssistant.vue'), meta: { title: 'AI 对话', description: '选择 AI 角色进行学习问答。' } },
+      { path: 'roles', component: () => import('@/views/RoleCompanion.vue'), meta: { title: 'AI 角色', description: '创建可保存、可复用的学习陪伴角色。' } },
+      { path: 'profile', component: () => import('@/views/UserProfile.vue'), meta: { title: '学习画像', description: '按学习空间维护目标、基础、薄弱点和内容偏好。' } },
       { path: 'models', component: () => import('@/views/ModelProvider.vue'), meta: { title: 'AI 模型', description: '接入并管理学习功能使用的 AI 模型。' } },
-      { path: 'chat', component: () => import('@/views/ChatAssistant.vue'), meta: { title: '资料问答', hidden: true } },
-      { path: 'agents', component: () => import('@/views/AgentWorkspace.vue'), meta: { title: '多 Agent 工作区', hidden: true } },
-      { path: 'graph', component: () => import('@/views/KnowledgeGraph.vue'), meta: { title: '知识图谱', hidden: true } },
-      { path: 'paths', component: () => import('@/views/LearningPath.vue'), meta: { title: '学习路径', hidden: true } },
+      { path: 'agents', component: () => import('@/views/AgentWorkspace.vue'), meta: { title: '多 Agent 工作区', description: '查看多智能体如何拆解目标、生成资源和复核结果。' } },
+      { path: 'graph', component: () => import('@/views/KnowledgeGraph.vue'), meta: { title: '知识图谱', description: '选择资源生成或预览 Mermaid 知识图谱。' } },
+      { path: 'paths', component: () => import('@/views/LearningPath.vue'), meta: { title: '学习路径', description: '把学习目标拆成阶段任务，并跟踪完成进度。' } },
       { path: 'help', component: () => import('@/views/Help.vue'), meta: { title: '帮助', hidden: true } },
       { path: 'resource-generator', redirect: '/resource-generation' }
     ]

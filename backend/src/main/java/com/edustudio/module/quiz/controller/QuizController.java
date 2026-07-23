@@ -15,11 +15,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -50,6 +52,13 @@ public class QuizController {
         return Result.success(quizService.detail(id));
     }
 
+    @Operation(summary = "删除测验")
+    @DeleteMapping("/quizzes/{id}")
+    public Result<Void> delete(@PathVariable Long id) {
+        quizService.delete(id);
+        return Result.success();
+    }
+
     @Operation(summary = "提交测验答案")
     @PostMapping("/quizzes/{id}/submit")
     public Result<QuizResultVO> submit(@PathVariable Long id, @Valid @RequestBody QuizSubmitRequest request) {
@@ -70,7 +79,7 @@ public class QuizController {
 
     @Operation(summary = "查询我的掌握度")
     @GetMapping("/mastery/me")
-    public Result<List<MasteryRecordVO>> mastery() {
-        return Result.success(quizService.mastery());
+    public Result<List<MasteryRecordVO>> mastery(@RequestParam(required = false) Long spaceId) {
+        return Result.success(quizService.mastery(spaceId));
     }
 }

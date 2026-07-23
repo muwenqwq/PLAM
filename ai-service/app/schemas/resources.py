@@ -14,6 +14,9 @@ class ResourceGenerateRequest(BaseModel):
     subject: str | None = None
     resource_type: str = "plan"
     input_params: dict[str, Any] = Field(default_factory=dict)
+    profile: dict[str, Any] = Field(default_factory=dict)
+    role_play_enabled: bool = False
+    companion_role: dict[str, Any] | None = None
 
 
 class ResourceGenerateResponse(BaseModel):

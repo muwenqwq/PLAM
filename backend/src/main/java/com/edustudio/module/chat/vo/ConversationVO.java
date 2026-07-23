@@ -25,6 +25,16 @@ public class ConversationVO {
 
     private String summary;
 
+    private Long roleId;
+
+    private Boolean rolePlayEnabled;
+
+    private String roleName;
+
+    private String roleIdentity;
+
+    private String roleThemeColor;
+
     private Integer messageCount;
 
     private String status;

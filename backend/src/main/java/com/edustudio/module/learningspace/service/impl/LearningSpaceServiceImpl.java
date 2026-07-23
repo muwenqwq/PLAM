@@ -7,26 +7,42 @@ import com.edustudio.common.api.PageResult;
 import com.edustudio.common.api.ResultCode;
 import com.edustudio.common.exception.BusinessException;
 import com.edustudio.common.security.LoginUserHolder;
+import com.edustudio.common.utils.JsonUtils;
+import com.edustudio.module.agent.entity.AgentTask;
+import com.edustudio.module.agent.mapper.AgentTaskMapper;
 import com.edustudio.module.learningspace.dto.LearningSpaceCreateRequest;
 import com.edustudio.module.learningspace.dto.LearningSpaceQueryRequest;
 import com.edustudio.module.learningspace.dto.LearningSpaceUpdateRequest;
 import com.edustudio.module.learningspace.entity.LearningSpace;
 import com.edustudio.module.learningspace.mapper.LearningSpaceMapper;
 import com.edustudio.module.learningspace.service.LearningSpaceService;
+import com.edustudio.module.learningspace.support.LearningSpaceDataCleaner;
 import com.edustudio.module.learningspace.vo.LearningSpaceSummaryVO;
 import com.edustudio.module.learningspace.vo.LearningSpaceVO;
+import com.edustudio.module.profile.entity.UserProfile;
+import com.edustudio.module.profile.mapper.UserProfileMapper;
+import com.edustudio.module.resource.entity.GeneratedResource;
+import com.edustudio.module.resource.mapper.GeneratedResourceMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class LearningSpaceServiceImpl extends ServiceImpl<LearningSpaceMapper, LearningSpace>
         implements LearningSpaceService {
 
     private static final String ACTIVE_STATUS = "active";
     private static final String DEFAULT_VISIBILITY = "private";
+
+    private final UserProfileMapper userProfileMapper;
+    private final GeneratedResourceMapper generatedResourceMapper;
+    private final AgentTaskMapper agentTaskMapper;
+    private final LearningSpaceDataCleaner dataCleaner;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -50,6 +66,7 @@ public class LearningSpaceServiceImpl extends ServiceImpl<LearningSpaceMapper, L
         entity.setTaskCount(0);
         entity.setStatus(ACTIVE_STATUS);
         save(entity);
+        createInitialProfile(userId, entity.getId(), request);
         return toVO(entity);
     }
 
@@ -86,6 +103,15 @@ public class LearningSpaceServiceImpl extends ServiceImpl<LearningSpaceMapper, L
         }
         if (StringUtils.hasText(request.getSubject())) {
             entity.setSubject(request.getSubject());
+            UserProfile profile = userProfileMapper.selectOne(new LambdaQueryWrapper<UserProfile>()
+                    .eq(UserProfile::getUserId, entity.getUserId())
+                    .eq(UserProfile::getSpaceId, entity.getId())
+                    .eq(UserProfile::getDeleted, 0)
+                    .last("LIMIT 1"));
+            if (profile != null) {
+                profile.setSubjectDirection(request.getSubject());
+                userProfileMapper.updateById(profile);
+            }
         }
         if (request.getDescription() != null) {
             entity.setDescription(request.getDescription());
@@ -109,6 +135,7 @@ public class LearningSpaceServiceImpl extends ServiceImpl<LearningSpaceMapper, L
         LearningSpace entity = getOwnedEntity(id);
         Long userId = entity.getUserId();
         boolean wasDefault = Boolean.TRUE.equals(entity.getDefaultSpace());
+        dataCleaner.deleteAll(userId, entity.getId());
         removeById(entity.getId());
         if (wasDefault) {
             promoteNewestSpaceAsDefault(userId);
@@ -143,15 +170,27 @@ public class LearningSpaceServiceImpl extends ServiceImpl<LearningSpaceMapper, L
     @Override
     public LearningSpaceSummaryVO summary(Long id) {
         LearningSpace entity = getOwnedEntity(id);
-        int resourceCount = entity.getResourceCount() == null ? 0 : entity.getResourceCount();
-        int taskCount = entity.getTaskCount() == null ? 0 : entity.getTaskCount();
+        Long userId = entity.getUserId();
+        ensureSpaceProfile(entity);
+        int resourceCount = Math.toIntExact(generatedResourceMapper.selectCount(new LambdaQueryWrapper<GeneratedResource>()
+                .eq(GeneratedResource::getUserId, userId)
+                .eq(GeneratedResource::getSpaceId, id)
+                .eq(GeneratedResource::getDeleted, 0)));
+        int taskCount = Math.toIntExact(agentTaskMapper.selectCount(new LambdaQueryWrapper<AgentTask>()
+                .eq(AgentTask::getUserId, userId)
+                .eq(AgentTask::getSpaceId, id)
+                .eq(AgentTask::getDeleted, 0)));
+        int profileCount = Math.toIntExact(userProfileMapper.selectCount(new LambdaQueryWrapper<UserProfile>()
+                .eq(UserProfile::getUserId, userId)
+                .eq(UserProfile::getSpaceId, id)
+                .eq(UserProfile::getDeleted, 0)));
         return LearningSpaceSummaryVO.builder()
                 .id(entity.getId())
                 .spaceName(entity.getSpaceName())
                 .subject(entity.getSubject())
                 .resourceCount(resourceCount)
                 .taskCount(taskCount)
-                .profileCount(0)
+                .profileCount(profileCount)
                 .generatedResourceCount(resourceCount)
                 .activeTaskCount(taskCount)
                 .upcomingTaskCount(0)
@@ -202,6 +241,54 @@ public class LearningSpaceServiceImpl extends ServiceImpl<LearningSpaceMapper, L
         }
         next.setDefaultSpace(true);
         updateById(next);
+    }
+
+    private void createInitialProfile(Long userId, Long spaceId, LearningSpaceCreateRequest request) {
+        UserProfile profile = new UserProfile();
+        profile.setUserId(userId);
+        profile.setSpaceId(spaceId);
+        profile.setLearningGoal(request.getLearningGoal());
+        profile.setSubjectDirection(request.getSubject());
+        profile.setFoundationLevel(StringUtils.hasText(request.getFoundationLevel())
+                ? request.getFoundationLevel()
+                : "intermediate");
+        profile.setInterestTags("[]");
+        profile.setWeakPoints(JsonUtils.toJson(request.getWeakPoints() == null ? List.of() : request.getWeakPoints()));
+        profile.setWeeklyAvailableHours(request.getWeeklyAvailableHours() == null
+                ? BigDecimal.ZERO
+                : request.getWeeklyAvailableHours());
+        profile.setAvailableTimeSlots(JsonUtils.toJson(request.getAvailableTimeSlots() == null
+                ? List.of()
+                : request.getAvailableTimeSlots()));
+        profile.setOutputStyle(StringUtils.hasText(request.getOutputStyle())
+                ? request.getOutputStyle()
+                : "结构化 Markdown");
+        profile.setProfileSource("space_creation");
+        profile.setStatus(ACTIVE_STATUS);
+        userProfileMapper.insert(profile);
+    }
+
+    private void ensureSpaceProfile(LearningSpace space) {
+        Long count = userProfileMapper.selectCount(new LambdaQueryWrapper<UserProfile>()
+                .eq(UserProfile::getUserId, space.getUserId())
+                .eq(UserProfile::getSpaceId, space.getId())
+                .eq(UserProfile::getDeleted, 0));
+        if (count > 0) {
+            return;
+        }
+        UserProfile profile = new UserProfile();
+        profile.setUserId(space.getUserId());
+        profile.setSpaceId(space.getId());
+        profile.setSubjectDirection(space.getSubject());
+        profile.setFoundationLevel("intermediate");
+        profile.setInterestTags("[]");
+        profile.setWeakPoints("[]");
+        profile.setWeeklyAvailableHours(BigDecimal.ZERO);
+        profile.setAvailableTimeSlots("[]");
+        profile.setOutputStyle("结构化 Markdown");
+        profile.setProfileSource("space_creation");
+        profile.setStatus(ACTIVE_STATUS);
+        userProfileMapper.insert(profile);
     }
 
     private LearningSpaceVO toVO(LearningSpace entity) {

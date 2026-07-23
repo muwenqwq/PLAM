@@ -36,4 +36,10 @@ public class AiChatRequest {
     private Map<String, Object> profile;
 
     private Map<String, Object> preference;
+
+    @JsonProperty("role_play_enabled")
+    private Boolean rolePlayEnabled;
+
+    @JsonProperty("companion_role")
+    private Map<String, Object> companionRole;
 }

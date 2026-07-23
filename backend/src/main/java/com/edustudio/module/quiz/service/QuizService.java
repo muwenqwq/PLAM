@@ -18,11 +18,15 @@ public interface QuizService {
 
     QuizVO detail(Long id);
 
+    void delete(Long id);
+
+    boolean deleteByResourceId(Long resourceId);
+
     QuizResultVO submit(Long id, QuizSubmitRequest request);
 
     QuizResultVO result(Long id);
 
     QuizResultVO analysis(Long id);
 
-    List<MasteryRecordVO> mastery();
+    List<MasteryRecordVO> mastery(Long spaceId);
 }

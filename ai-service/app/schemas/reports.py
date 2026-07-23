@@ -13,6 +13,10 @@ class ReportGenerateRequest(BaseModel):
     title: str
     overview: dict[str, Any] = Field(default_factory=dict)
     mastery_records: list[dict[str, Any]] = Field(default_factory=list)
+    learning_evidence: dict[str, Any] = Field(default_factory=dict)
+    profile: dict[str, Any] = Field(default_factory=dict)
+    role_play_enabled: bool = False
+    companion_role: dict[str, Any] | None = None
 
 
 class ReportGenerateResponse(BaseModel):
